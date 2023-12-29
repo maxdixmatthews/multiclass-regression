@@ -19,9 +19,9 @@ def main(config):
     df = pd.read_csv('tiny_one.csv')
     df.drop(df.columns[0], axis=1,inplace=True)
     X1_train, X1_test, y1_train, y1_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42)
-    loaded_model = load(config.model_path + '\\model.joblib')
-    # output = loaded_model.predict(X1_test)
-    print(classification_report(y1_test.to_list(), output['y_pred'].to_list(), target_names=['1','2','3','4']))
+    # loaded_model = load(config.model_path + '\\model.joblib')
+    # # output = loaded_model.predict(X1_test)
+    # print(classification_report(y1_test.to_list(), output['y_pred'].to_list(), target_names=['1','2','3','4']))
 
     # df = pd.read_csv('model_data1.csv')
     # df = pd.read_csv('tiny_one.csv')
@@ -31,6 +31,7 @@ def main(config):
     #build little models
     my_mod1 = mod.single_model(['123', '4'])
     my_mod1.train(X1_train)
+    print(my_mod1.fitted_model)
 
     my_mod2 = mod.single_model(['13', '2'])
     my_mod2.train(X1_train)   
@@ -41,9 +42,9 @@ def main(config):
     
 
     #build tree_model
-    tree_model = mod.tree_model('tree_mod1', [my_mod1, my_mod2, my_mod3])
+    tree_model = mod.tree_model('tree_mod1', [my_mod1, my_mod2, my_mod3], [['123', '4'], ['13', '2'], ['1', '3']])
     output = tree_model.predict(X1_test)
-    # print(classification_report(y1_test.to_list(), output['y_pred'].to_list(), target_names=['1','2','3','4']))
+    print(classification_report(y1_test.to_list(), output['y_pred'].to_list(), target_names=['1','2','3','4']))
     dump(tree_model, config.model_path + '\\model.joblib')
 
 

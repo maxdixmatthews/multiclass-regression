@@ -29,7 +29,6 @@ class single_model(model):
         self.type_1 = num_list_2
         self.fitted_model = None
         self.predicted_df = None
-
     
     def get_model_name(self):
         return self.name
@@ -93,7 +92,8 @@ class tree_model(model):
             sds
         """
         super().__init__(name)
-        self.models = model_list
+        self.models = sorted(model_list, key=lambda x: len(x.name), reverse=True)
+        #sort model list
         self.predicted_df = None
         self.tree_struct = tree_struct
 

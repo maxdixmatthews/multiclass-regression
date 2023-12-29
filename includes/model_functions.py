@@ -1,6 +1,7 @@
 from joblib import dump, load
 import pandas as pd
 import includes.model as mod
+from itertools import combinations
 from sklearn.model_selection import train_test_split
 
 def save_model(path, model):
@@ -65,9 +66,51 @@ def defined_all_trees(n: int):
     output:
         list of all trees
     """
-    all_trees = list()
-    if n == 4:
-        all_trees = [[['123', '4'], ['13', '2'], ['1', '3']], 
-                     [['12','34'], ['1', '2'], ['3', '4']],
-                     [['124', '3'], ['12', '4'], ['1', '2']]]
-    return all_trees
+    categories = tuple(range(1, n + 1))
+    all_trees_normalized = generate_normalized_branches(categories)
+
+    # Convert frozensets back to lists for readability
+    all_trees_normalized_list = [sorted(list(map(list, tree))) for tree in all_trees_normalized]
+    return all_trees_normalized_list
+
+def stringify(node):
+    """ Convert a tuple of numbers into a concatenated string. """
+    return ''.join(map(str, node))
+
+def generate_normalized_branches(categories):
+    """
+    Recursively generate all branches for the given categories with normalized order.
+    This function ensures that each branch is represented in a standardized way to eliminate duplicates.
+    """
+    if len(categories) <= 1:
+        return [set()]  # No branches can be formed from a single category
+
+    branches_set = set()
+    for left in generate_subsets(categories):
+        right = tuple(set(categories) - set(left))
+
+        # Generate branches for left and right subsets
+        left_branches = generate_normalized_branches(left)
+        right_branches = generate_normalized_branches(right)
+
+        for l_branch_set in left_branches:
+            for r_branch_set in right_branches:
+                # Combine current split with left and right branches
+                new_branch = tuple(sorted([stringify(left), stringify(right)]))
+                combined_branches = {new_branch}.union(l_branch_set, r_branch_set)
+                branches_set.add(frozenset(combined_branches))  # Using frozenset to allow set of sets
+    
+    return branches_set
+
+def generate_subsets(s):
+    """ Generate all non-empty subsets of a set s. """
+    subsets = []
+    for r in range(1, len(s)):
+        subsets.extend(combinations(s, r))
+    return subsets
+
+def single_models_from_trees(trees_total):
+    """Get list of all models to be generated from the trees"""
+    total_models = [branch for tree in trees_total for branch in tree]
+    return_model = list(set(tuple(sorted(''.join(sorted(pair)) for pair in element)) for element in total_models))
+    return return_model
