@@ -21,7 +21,7 @@ class single_model(model):
     def __init__(self, category_split: list):
         num_list_1 = [int(digit) for digit in category_split[0]]
         num_list_2 = [int(digit) for digit in category_split[1]]
-        name = category_split[0] + '_' + category_split[1]
+        name = str(category_split[0]) + '_' + str(category_split[1])
         super().__init__(name)
         self.name = name
         self.all_cat_tested = list(set(num_list_1 + num_list_2))

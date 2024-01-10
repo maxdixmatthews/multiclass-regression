@@ -71,10 +71,12 @@ def defined_all_trees(n: int):
 
     # Convert frozensets back to lists for readability
     all_trees_normalized_list = [sorted(list(map(list, tree))) for tree in all_trees_normalized]
+    all_trees_normalized_list = [[sorted(branch, key=len, reverse=True) for branch in tree] for tree in all_trees_normalized_list]
     return all_trees_normalized_list
 
 def stringify(node):
     """ Convert a tuple of numbers into a concatenated string. """
+    return node
     return ''.join(map(str, node))
 
 def generate_normalized_branches(categories):
@@ -99,7 +101,6 @@ def generate_normalized_branches(categories):
                 new_branch = tuple(sorted([stringify(left), stringify(right)]))
                 combined_branches = {new_branch}.union(l_branch_set, r_branch_set)
                 branches_set.add(frozenset(combined_branches))  # Using frozenset to allow set of sets
-    
     return branches_set
 
 def generate_subsets(s):
@@ -111,6 +112,6 @@ def generate_subsets(s):
 
 def single_models_from_trees(trees_total):
     """Get list of all models to be generated from the trees"""
-    total_models = [branch for tree in trees_total for branch in tree]
-    return_model = list(set(tuple(sorted(''.join(sorted(pair)) for pair in element)) for element in total_models))
+    total_models = [sorted(branch, key=lambda x: len(x), reverse=True)  for tree in trees_total for branch in tree]
+    return_model = [list(t) for t in set(tuple(e) for e in total_models)]
     return return_model
