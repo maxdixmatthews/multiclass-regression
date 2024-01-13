@@ -29,20 +29,20 @@ def main(config):
     X1_train, X1_test, y1_train, y1_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42)
 
     #build little models
-    my_mod1 = mod.single_model(['123', '4'])
+    my_mod1 = mod.single_model([(1,2,3), (4,)])
     my_mod1.train(X1_train)
     print(my_mod1.fitted_model)
 
-    my_mod2 = mod.single_model(['13', '2'])
+    my_mod2 = mod.single_model([(1,3), (2,)])
     my_mod2.train(X1_train)   
     # my_mod2.test(X1_test)
 
-    my_mod3 = mod.single_model(['1', '3'])
+    my_mod3 = mod.single_model([(1,), (3,)])
     my_mod3.train(X1_train)
     
 
     #build tree_model
-    tree_model = mod.tree_model('tree_mod1', [my_mod1, my_mod2, my_mod3], [['123', '4'], ['13', '2'], ['1', '3']])
+    tree_model = mod.tree_model('tree_mod1', [my_mod1, my_mod2, my_mod3], [[(1,2,3), (4,)], [(1,3), (2,)], [(1,), (3,)]])
     output = tree_model.predict(X1_test)
     print(classification_report(y1_test.to_list(), output['y_pred'].to_list(), target_names=['1','2','3','4']))
     dump(tree_model, config.model_path + '\\model.joblib')

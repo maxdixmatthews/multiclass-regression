@@ -15,10 +15,11 @@ from joblib import dump, load
 from includes.config import Config
 import includes.model_functions as mf
 import time
+from itertools import combinations
 
 def main(config):
     # From stack exchange there are this many trees for a given n: (2n-3)!!
-    tree_len = 3
+    tree_len = 6
     start = time.perf_counter()
     all_tree_struc = mf.defined_all_trees(tree_len)
     print(all_tree_struc)

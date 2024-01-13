@@ -3,6 +3,7 @@ import pandas as pd
 import includes.model as mod
 from itertools import combinations
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
 def save_model(path, model):
     """
@@ -27,7 +28,7 @@ def read_model(path: str):
 
 def build_single_models(models_list: list, train_data) -> list:
     """
-    Saves a model to joblib file
+    Builds all single models
     input:
         models_list: list of 2 elements lists with models to be produced e.g [['123','4'],['13', '2']]
         train_data: data that will be used to train all models 
@@ -41,6 +42,16 @@ def build_single_models(models_list: list, train_data) -> list:
         new_mod.train(train_data)
         trained_model_lists[tuple(i)] = new_mod
     return trained_model_lists
+
+def test_single_models(models: list, x_test_data, y_test_data):
+    """
+    Check all single models
+    """
+    tested_models = dict()
+    for i in models:
+        y_pred = i.predict(x_test_data)
+        tested_models[tuple(i.category_split)] = accuracy_score(y_test_data.to_list(), y_pred.to_list())
+    return tested_models
 
 def defined_all_models(n: int):
     """
@@ -66,7 +77,7 @@ def defined_all_trees(n: int):
     output:
         list of all trees
     """
-    categories = tuple(range(1, n + 1))
+    categories = tuple(range(1, n+1))
     all_trees_normalized = generate_normalized_branches(categories)
 
     # Convert frozensets back to lists for readability

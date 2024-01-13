@@ -15,8 +15,8 @@ class model(ABC):
         pass
 
 class single_model(model):
-    #Name a model x_y to do x vs y regression pass list [x,y]. 
-    # E.g 123_456 to do a binary model of 123 vs 456 
+    # Name a model (x,)_(y,) to do x vs y regression pass list [(x,),(y,)]. 
+    # E.g (1,2,3)_(4,5,6) to do a binary model of 123 vs 456 
     # 123 = 0 and 456 = 1
     def __init__(self, category_split: list):
         num_list_1 = [int(digit) for digit in category_split[0]]
@@ -29,6 +29,7 @@ class single_model(model):
         self.type_1 = num_list_2
         self.fitted_model = None
         self.predicted_df = None
+        self.cateogry_split = category_split
     
     def get_model_name(self):
         return self.name
