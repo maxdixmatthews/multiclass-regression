@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod, abstractproperty
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 
 class model(ABC):
     def __init__(self, model_name):
@@ -18,19 +19,26 @@ class single_model(model):
     # Name a model (x,)_(y,) to do x vs y regression pass list [(x,),(y,)]. 
     # E.g (1,2,3)_(4,5,6) to do a binary model of 123 vs 456 
     # 123 = 0 and 456 = 1
-    def __init__(self, category_split: list):
+    def __init__(self, category_split: list, score_type='accuracy'):
         num_list_1 = [int(digit) for digit in category_split[0]]
         num_list_2 = [int(digit) for digit in category_split[1]]
         name = str(category_split[0]) + '_' + str(category_split[1])
         super().__init__(name)
         self.name = name
         self.all_cat_tested = list(set(num_list_1 + num_list_2))
+        self.type_0_categories = category_split[0]
+        self.type_1_categories = category_split[1]
         self.type_0 = num_list_1
         self.type_1 = num_list_2
         self.fitted_model = None
         self.predicted_df = None
-        self.cateogry_split = category_split
-    
+        self.category_split = category_split
+        self.score = None
+        self.y_target = None
+        if score_type == 'accuracy':
+            self.score_type = 'accuracy'
+        else:
+            self.score_type = 'accuracy'
     def get_model_name(self):
         return self.name
     
@@ -57,7 +65,7 @@ class single_model(model):
         self.fitted_model = model
         return model
 
-    def predict(self, df: pd.DataFrame):
+    def predict(self, df_original: pd.DataFrame):
         """
         Tests the model on a given set of data. Must be called after a model has been trained
         input:
@@ -66,6 +74,7 @@ class single_model(model):
         output:
             sds
         """
+        df = df_original.copy()
         df['key'] = df.index
         response_col = 'Y'
         # train_df = df.copy()
@@ -77,6 +86,41 @@ class single_model(model):
         df['y_pred'] = y_pred
         self.predicted_df = df[['key','y_pred']]
         return self.predicted_df
+
+    def predict_individual(self, df_original: pd.DataFrame):
+        """
+        Tests the model on a given set of data and scores the model independently of the others
+        input:
+            df: pandas dataframe of the test data
+            response_col: optional name of the column with response in it (defauls to Y)
+        output:
+            sds
+        """
+        df = df_original.copy()
+        df['key'] = df.index
+        response_col = 'Y'
+        train_df = df.copy()
+        train_df[self.name] = train_df[response_col].apply(lambda x: 0 if x in self.type_0 else (1 if x in self.type_1 else 'ROW_NOT_IN_REG') )
+        train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
+        if self.fitted_model == None:
+            raise Exception('Must train model on data before it can be tested.')
+        y_pred = self.fitted_model.predict(train_df.drop(['key',response_col, self.name], axis=1))
+        train_df['y_pred'] = y_pred
+        self.predicted_df = train_df[['key','y_pred']]
+        self.y_pred = y_pred
+        self.y_target = train_df[self.name].tolist()
+        
+        return self.predicted_df
+    
+    def model_score(self):
+        if self.y_pred is None or self.y_target is None:
+            raise Exception ('Must run predict on a model before scoring it.')
+        else:
+            if self.score_type == 'accuracy':
+                self.score = accuracy_score(self.y_target,self.y_pred.tolist())
+            else:
+                self.score = accuracy_score(self.y_target,self.y_pred.tolist())
+            return self.score
     
     def get_prediction(self):
         return self.predicted_df
