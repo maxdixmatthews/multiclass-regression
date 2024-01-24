@@ -26,16 +26,51 @@ def main(config):
     all_model_struc = mf.single_models_from_trees(all_tree_struc)
 
     layer_1 = [tree for tree in all_model_struc if sum(len(t) for t in tree) == 6]
-    all_layer1_models = mf.build_single_models(all_model_struc, X1_train)
-    mf.test_single_models(all_layer1_models, X1_test, y1_test)
+    all_layer1_models = mf.build_single_models(layer_1, X1_train)
+    scores = mf.test_single_models(all_layer1_models, X1_test)
     # run all layer_1, then pick the best one, then find all trees under this layer 1
-    print(layer_1)
-    for tree in layer_1:
+    #Now, pick the highest 
+    highest_l1_model = all_layer1_models[max(scores, key=scores.get)]
+    print(f"Highest layer1 model is {highest_l1_model.name} with score of {highest_l1_model.model_score()}")
+    #Now, we consider these models: pick the left and right models and keep doing the same thing 
+    layer_2 = [tree for tree in all_tree_struc if highest_l1_model.category_split in tree]
+    # print(layer_2)
+    #Now generate all for the left
+    layer_2_left = highest_l1_model.type_0_categories
+    layer_2_l = [model for model in all_model_struc if sorted(list(layer_2_left)) == sorted(list(set(model[0]+model[1])))]
+    all_layer2_l_models = mf.build_single_models(layer_2_l, X1_train)
 
-    #Now I have to go
-    layer_2 = [tree for tree in all_model_struc if sum(len(t) for t in tree) == 6]
+    scores_2_l = mf.test_single_models(all_layer2_l_models, X1_test)
+    highest_2_l_model = all_layer2_l_models[max(scores_2_l, key=scores_2_l.get)]
+    print(f"Highest layer1 left model is {highest_2_l_model.name} with score of {highest_2_l_model.model_score()}")
 
-    #generate all first layer ones 
+    #Now generate all for the right
+    layer_2_right = highest_l1_model.type_1_categories
+    layer_2_r = [model for model in all_model_struc if sorted(list(layer_2_right)) == sorted(list(set(model[0]+model[1])))]
+    all_layer2_r_models = mf.build_single_models(layer_2_r, X1_train)
+
+    scores_2_r = mf.test_single_models(all_layer2_r_models, X1_test)
+    highest_2_r_model = all_layer2_r_models[max(scores_2_r, key=scores_2_r.get)]
+    print(f"Highest layer1 right model is {highest_2_r_model.name} with score of {highest_2_r_model.model_score()}")
+
+    # Layer 2 LL
+    layer_2_left_left = highest_2_l_model.type_0_categories
+    layer_2_l_l = [model for model in all_model_struc if sorted(list(layer_2_left_left)) == sorted(list(set(model[0]+model[1])))]
+    all_layer2_l_l_models = mf.build_single_models(layer_2_l_l, X1_train)
+
+    scores_2_l_l = mf.test_single_models(all_layer2_l_l_models, X1_test)
+    highest_2_l_l_model = all_layer2_l_l_models[max(scores_2_l_l, key=scores_2_l_l.get)]
+    print(f"Highest layer1 left left model is {highest_2_l_l_model.name} with score of {highest_2_l_l_model.model_score()}")
+
+    # Layer 2 RL
+    layer_2_right_left = highest_2_r_model.type_0_categories
+    layer_2_r_l = [model for model in all_model_struc if sorted(list(layer_2_right_left)) == sorted(list(set(model[0]+model[1])))]
+    all_layer2_r_l_models = mf.build_single_models(layer_2_r_l, X1_train)
+
+    scores_2_r_l = mf.test_single_models(all_layer2_r_l_models, X1_test)
+    highest_2_r_l_model = all_layer2_r_l_models[max(scores_2_r_l, key=scores_2_r_l.get)]
+    print(f"Highest layer1 right model is {highest_2_r_l_model.name} with score of {highest_2_r_l_model.model_score()}")
+
 
 if __name__ == '__main__':
     config = Config()
