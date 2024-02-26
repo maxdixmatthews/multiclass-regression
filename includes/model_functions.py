@@ -108,22 +108,25 @@ def get_iterations_num(cat_num:int):
     output:
         returns int of how many iterations needed for stepwise
     """
-    list_of_counts = [0,0,10,40,50,90,100,300,500,500,500]
+    list_of_counts = [0, 0, 10, 40, 50, 90, 100, 300, 500, 700, 1000, 1000, 1000, 1000, 1000, 1000]
     return list_of_counts[cat_num]
 
-def single_step_wise(categories, X1_train, X1_test):
+def single_step_wise(categories, X1_train, X1_test, model_type='LogisticRegression'):
     model_score = 0
     return_model_first = None
     model_list = dict()
     accepted_count = 0
     iterations = get_iterations_num(len(categories))
+    model_type = 'svm'
+    model_type = 'LogisticRegression'
+
     for i in categories:
         first_category = i
         left_category = tuple(x for x in categories if int(x) != first_category)
         right_category = tuple(x for x in categories if int(x) == first_category)
         first_model_struc = [[left_category, right_category]]
 
-        first_model = build_single_models(first_model_struc, X1_train)
+        first_model = build_single_models(first_model_struc, X1_train, train_type=model_type)
         prop_model_score = list(test_single_models(first_model, X1_test).values())[0]
         return_model = first_model
         if prop_model_score > model_score:
@@ -154,7 +157,7 @@ def single_step_wise(categories, X1_train, X1_test):
         # print(f'Prop right things {prop_right_category}')
         prop_next_model_struc = [[prop_left_category, prop_right_category]]
         # print(prop_next_model_struc)
-        prop_model = build_single_models(prop_next_model_struc, X1_train)
+        prop_model = build_single_models(prop_next_model_struc, X1_train, train_type=model_type)
         prop_model_score = list(test_single_models(prop_model, X1_test).values())[0]
 
         if model_score < prop_model_score + random_noise:

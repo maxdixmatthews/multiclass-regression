@@ -2,6 +2,13 @@ from abc import ABC, abstractmethod, abstractproperty
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+import xgboost as xgb
+from skopt import BayesSearchCV
+from skopt.space import Real, Integer
+from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+import numpy as np
+from sklearn import svm
 
 class model(ABC):
     def __init__(self, model_name):
@@ -51,16 +58,58 @@ class single_model(model):
         output:
             sds
         """
-        if model_type == 'LogisticRegression':
-            model = LogisticRegression(solver='lbfgs', max_iter=1000)
-        else:
-            model = LogisticRegression(solver='lbfgs', max_iter=1000)
-            # XGBoost, Neural Network, Stukel model, anyother will work 
-            # beat multinomial regression 
+        # Setup
         train_df = df.copy()
         train_df[self.name] = train_df[response_col].apply(lambda x: 0 if x in self.type_0 else (1 if x in self.type_1 else 'ROW_NOT_IN_REG') )
         train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
         Y = train_df[self.name].astype(int)
+
+        #Select model
+        if model_type == 'LogisticRegression':
+            model = LogisticRegression(solver='lbfgs', max_iter=1000)
+        elif model_type.lower() == 'xgboost':
+            xgb_model = xgb.XGBClassifier(objective="binary:logistic")
+            # model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
+            model = KNeighborsClassifier(n_neighbors=5)
+            # Will have to do hyperparameter tuning
+            # Define search space
+            # search_spaces = {   
+            #     'learning_rate': Real(0.01, 1.0, 'log-uniform'),
+            #     'max_depth': Integer(2, 20),
+            #     'reg_lambda': Real(1e-9, 100., 'log-uniform'),
+            #     'reg_alpha': Real(1e-9, 100., 'log-uniform'),
+            #     'gamma': Real(1e-9, 0.5, 'log-uniform'),  
+            #     'n_estimators': Integer(10, 1000)
+            # }
+            # model = BayesSearchCV(
+            #                     estimator = xgb_model,                                    
+            #                     search_spaces = search_spaces,                      
+            #                     scoring = 'roc_auc',                                  
+            #                     cv = StratifiedKFold(n_splits=5, shuffle=True),                                   
+            #                     n_iter = 20,                                      
+            #                     n_points = 5,                                       
+            #                     n_jobs = 1,                                                                                
+            #                     verbose = 0,
+            #                     random_state=42,
+            #                     refit=True
+            # )  
+            np.int = int
+            # _ = bayes_cv.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            # model = xgb.XGBClassifier(
+            #     n_jobs = 5,
+            #     objective = 'binary:logistic',
+            #     eval_metric = 'auc', 
+            #     booster = 'gbtree',
+            #     enable_categorical = True, 
+            #     early_stopping_rounds = 5,
+            #     **bayes_cv.best_params_
+            # )
+        elif model_type.lower() == 'svm':
+            model = svm.SVC()
+        else:
+            model = LogisticRegression(solver='sag', max_iter=1000)
+            # XGBoost, Neural Network, Stukel model, anyother will work 
+            # beat multinomial regression 
         model.fit(train_df.drop([response_col,self.name], axis=1), Y)
         self.fitted_model = model
         return model
