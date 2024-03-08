@@ -33,7 +33,7 @@ def build_single_models(models_list: list, train_data, score_type='accuracy', tr
     """
     Builds all single models
     input:
-        models_list: list of 2 elements lists with models to be produced e.g [['123','4'],['13', '2']]
+        models_list: list of 2 elements lists with models to be produced e.g [[(1,2,3),(4,)],[(1,3), (2,)]]
         train_data: data that will be used to train all models 
         score_type: The metric we are looking to maximuse
     output:
@@ -197,6 +197,105 @@ def stepwise_tree_layer_by_layer(categories, X1_train, X1_test, total_tree):
 
     return list(set(total_tree + total2))
 
+def stepwise_inclusion(left_list, right_list, X_train, X_test): 
+    # Returns best_model and best_score as tuple (best_model, best_score)
+    model_list = []
+    for i in right_list:
+        all_but_one = tuple(x for x in right_list if x != i)
+        model_def = [tuple(tuple(left_list) + (i,)), all_but_one]
+        model_list.append(model_def)
+    
+    model = build_single_models(model_list, X_train, train_type='LogisticRegression')
+    tested_mods = test_single_models(model,X_test)
+    sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
+    best_mod = sorted_d_desc[0][0]
+    best_score = sorted_d_desc[0][1]
+    return best_mod, best_score
+    
+def stepwise_exclusion(left_list, right_list, X_train, X_test):
+    # Returns best_model and best_score as tuple (best_model, best_score)
+    model_list = []
+    for i in left_list:
+        all_but_one = tuple(x for x in left_list if x != i)
+        model_def = [tuple(tuple(right_list) + (i,)), all_but_one]
+        model_list.append(model_def)
+    
+    model = build_single_models(model_list, X_train, train_type='LogisticRegression')
+    tested_mods = test_single_models(model, X_test)
+    sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
+    best_mod_ordered = (sorted_d_desc[0][0][1], sorted_d_desc[0][0][0])
+    best_score = sorted_d_desc[0][1]
+    return best_mod_ordered, best_score
+    
+def stepwise_single_layer(categories, X_train, X_test, model_type='LogisticRegression'):
+    best_mod, best_score = stepwise_inclusion([], categories, X_train, X_test)
+    while True:
+        new_mod, new_score = stepwise_inclusion(best_mod[0], best_mod[1], X_train, X_test)
+        if new_score > best_score:
+            best_mod = new_mod
+            best_score = new_score
+        else:
+            if len(new_mod[1]) > 1:
+                second_inclusion_mod, second_inclusion_score = stepwise_inclusion(new_mod[0], new_mod[1], X_train, X_test)
+                if second_inclusion_score > best_score:
+                    best_mod = second_inclusion_mod
+                    best_score = second_inclusion_score
+                else:
+                    if len(second_inclusion_mod[1]) > 1:
+                        third_inclusion_mod, third_inclusion_score = stepwise_inclusion(second_inclusion_mod[0], second_inclusion_mod[1], X_train, X_test)
+                        if third_inclusion_score > best_score:
+                            best_mod = third_inclusion_mod
+                            best_score = third_inclusion_score
+                        else:
+                            if len(third_inclusion_mod[1]) > 1:
+                                fourth_inclusion_mod, fourth_inclusion_score = stepwise_inclusion(third_inclusion_mod[0], third_inclusion_mod[1], X_train, X_test)
+                                print(f'{fourth_inclusion_mod} acc = {fourth_inclusion_score}')
+                                print(f'{best_mod} acc = {best_score}')
+                                if fourth_inclusion_score > best_score:
+                                    best_mod = fourth_inclusion_mod
+                                    best_score = fourth_inclusion_score
+                                else:
+                                    break
+                            else:
+                                break
+                    else:
+                        break
+            else:
+                break
+        new_backward_mod, new_backward_score = stepwise_exclusion(best_mod[0], best_mod[1], X_train, X_test)
+        if new_backward_score > best_score:
+            best_mod = new_backward_mod
+            best_score = new_backward_score      
+        else:
+            break
+    return best_mod
+
+def stepwise_tree(categories, X1_train, X1_test, total_tree):
+    """
+    Build this tree in a stepwise recursive way
+    input:
+        categories: a tuple of the lists 
+        all_model_struc: a list of all models
+        X1_train: the x train data
+        X1_test: the x test data
+        total_tree: a list pf the biggest models
+    output:
+        list of binary comparisons
+    """
+    if len(categories) <= 2:
+        if len(categories) == 2:
+            two_cat_mod = ((categories[0],), (categories[1],))
+            return list(set(total_tree + [two_cat_mod]))
+        else:
+            return total_tree
+    
+    highest_model = stepwise_single_layer(categories, X1_train, X1_test)
+    total_tree.append(highest_model)
+
+    total1 = stepwise_tree(tuple(highest_model[0]), X1_train, X1_test, total_tree)
+    total2 = stepwise_tree(tuple(highest_model[1]), X1_train, X1_test, total1+total_tree)
+
+    return list(set(total_tree + total2))
 
 def defined_all_models(n: int):
     """

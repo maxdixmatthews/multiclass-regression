@@ -21,6 +21,7 @@ import xgboost as xgb
 from sklearn import svm
 import warnings
 from sklearn.exceptions import DataConversionWarning
+from sklearn.preprocessing import MinMaxScaler
 
 
 def main(config):
@@ -36,20 +37,33 @@ def main(config):
     y = X['Y']
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=False)
     # X_test = pd.read_csv('C:\\Users\\maxdi\\OneDrive\\Documents\\uni_honours_docs\\digits_test.csv')
-
+    scaler = MinMaxScaler(feature_range = (0,1))
+    X_train = X_train.drop('Unnamed: 0',axis=1)
+    X_test = X_test.drop('Unnamed: 0',axis=1)
+    y_train = X_train.copy()['Y']
+    y_test = X_test.copy()['Y']
+    X_train = X_train.drop('Y',axis=1)
+    X_test = X_test.drop('Y',axis=1)   
+    print(X_train)
+    scaler.fit(X_train)
+    X_train = pd.DataFrame(scaler.transform(X_train))
+    X_test = pd.DataFrame(scaler.transform(X_test))
+    X_train['Y'] = y_train
+    X_test['Y'] = y_test
     ## Best struct
     # found_best_mod_struc = [[(1, 3, 8, 9), (4,)], [(2,), (0, 1, 3, 4, 5, 6, 7, 8, 9)], [(3, 8), (1, 9)], [(1,), (9,)], [(1, 3, 4, 7, 8, 9), (5, 6)], [(1, 3, 4, 8, 9), (7,)], [(0,), (1, 3, 4, 5, 6, 7, 8, 9)], [(5,), (6,)], [(3,), (8,)]]
-    # found_best_mod_struc = [[(0, 1, 2, 3, 4), (5, 6, 7, 8, 9)], [(0, 1, 2), (3, 4)], [(5, 6, 7, 8), (9,)], [(0, 2), (1,)], [(3,), (4,)], [(5, 6), (7, 8)], [(0,), (2,)], [(5,), (6,)], [(7,), (8,)]]    
+    found_best_mod_struc = [[(0, 1, 2, 3, 4), (5, 6, 7, 8, 9)], [(0, 1, 2), (3, 4)], [(5, 6, 7, 8), (9,)], [(0, 2), (1,)], [(3,), (4,)], [(5, 6), (7, 8)], [(0,), (2,)], [(5,), (6,)], [(7,), (8,)]]    
     # all_models_def = mf.build_single_models(found_best_mod_struc, X_train, train_type='xgboost')
-    # # all_models_def = mf.build_single_models(found_best_mod_struc, X_train, train_type='Logistic')
-    # all_models = list(all_models_def.values())
-    # tree_model = mod.tree_model('tree_mod1', all_models, found_best_mod_struc)
-    # print(tree_model.tree_struct)
-    # output = tree_model.predict(X_test)
-    # accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
-    # print(accuracy)
-    # print(f'Took {time.perf_counter() - start_time}')
-    # return
+    all_models_def = mf.build_single_models(found_best_mod_struc, X_train, train_type='LogisticRegression')
+    all_models = list(all_models_def.values())
+    tree_model = mod.tree_model('tree_mod1', all_models, found_best_mod_struc)
+    print(tree_model.tree_struct)
+    output = tree_model.predict(X_test)
+    accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
+    print(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=['0','1','2','3','4','5','6','7','8','9']))
+    print(accuracy)
+    print(f'Took {time.perf_counter() - start_time}')
+    return
 
     ## Multiclass models
     # model = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=10000)

@@ -66,11 +66,11 @@ class single_model(model):
 
         #Select model
         if model_type == 'LogisticRegression':
-            model = LogisticRegression(solver='lbfgs', max_iter=1000)
+            model = LogisticRegression(solver='lbfgs', max_iter=2000)
         elif model_type.lower() == 'xgboost':
-            xgb_model = xgb.XGBClassifier(objective="binary:logistic")
+            model = xgb.XGBClassifier(objective="binary:logistic")
             # model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
-            model = KNeighborsClassifier(n_neighbors=5)
+            # model = KNeighborsClassifier(n_neighbors=5)
             # Will have to do hyperparameter tuning
             # Define search space
             # search_spaces = {   
@@ -107,7 +107,7 @@ class single_model(model):
         elif model_type.lower() == 'svm':
             model = svm.SVC()
         else:
-            model = LogisticRegression(solver='sag', max_iter=1000)
+            model = LogisticRegression(solver='sag', max_iter=2000)
             # XGBoost, Neural Network, Stukel model, anyother will work 
             # beat multinomial regression 
         model.fit(train_df.drop([response_col,self.name], axis=1), Y)

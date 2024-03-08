@@ -28,6 +28,7 @@ def main(config):
     layer_1 = [tree for tree in all_model_struc if sum(len(t) for t in tree) == 6]
     all_layer1_models = mf.build_single_models(layer_1, X1_train)
     scores = mf.test_single_models(all_layer1_models, X1_test)
+    print(scores)
     # run all layer_1, then pick the best one, then find all trees under this layer 1
     #Now, pick the highest 
     highest_l1_model = all_layer1_models[max(scores, key=scores.get)]
