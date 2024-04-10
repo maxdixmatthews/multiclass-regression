@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+
+# Ignore all files in the models directory
+/models/

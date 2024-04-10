@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod, abstractproperty
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, roc_curve, f1_score, roc_auc_score
+from sklearn.model_selection import cross_val_predict
 import xgboost as xgb
 from skopt import BayesSearchCV
 from skopt.space import Real, Integer
@@ -9,6 +10,7 @@ from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 from sklearn import svm
+import includes.model_functions as mf
 
 class model(ABC):
     def __init__(self, model_name):
@@ -42,6 +44,8 @@ class single_model(model):
         self.category_split = category_split
         self.score = None
         self.y_target = None
+        self.cutoff = None
+        self.model_type = None
         if score_type == 'accuracy':
             self.score_type = 'accuracy'
         else:
@@ -63,12 +67,29 @@ class single_model(model):
         train_df[self.name] = train_df[response_col].apply(lambda x: 0 if x in self.type_0 else (1 if x in self.type_1 else 'ROW_NOT_IN_REG') )
         train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
         Y = train_df[self.name].astype(int)
+        self.model_type = model_type
 
         #Select model
         if model_type == 'LogisticRegression':
             model = LogisticRegression(solver='lbfgs', max_iter=2000)
+            # Find Cutoff using Youden's J statistic
+            # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
+            # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+            # optimal_idx = np.argmax(tpr - fpr)
+            # self.cutoff = thresholds[optimal_idx]
+            # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, 'f1')
+            #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
+
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(objective="binary:logistic")
+            # Find Cutoff using Youden's J statistic
+            predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
+            fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+            optimal_idx = np.argmax(tpr - fpr)
+            self.cutoff = thresholds[optimal_idx]
+            #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
+
             # model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
             # model = KNeighborsClassifier(n_neighbors=5)
             # Will have to do hyperparameter tuning
@@ -108,10 +129,21 @@ class single_model(model):
             model = svm.SVC()
         else:
             model = LogisticRegression(solver='sag', max_iter=2000)
+
+            # Find Cutoff using Youden's J statistic
+            # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
+            # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+            # optimal_idx = np.argmax(tpr - fpr)
+            # self.cutoff = thresholds[optimal_idx]
+            #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
+
+            # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, 'f1')
             # XGBoost, Neural Network, Stukel model, anyother will work 
             # beat multinomial regression 
         model.fit(train_df.drop([response_col,self.name], axis=1), Y)
         self.fitted_model = model
+
         return model
 
     def predict(self, df_original: pd.DataFrame):
@@ -119,23 +151,54 @@ class single_model(model):
         Tests the model on a given set of data. Must be called after a model has been trained
         input:
             df: pandas dataframe of the test data
-            response_col: optional name of the column with response in it (defauls to Y)
+            response_col: optional name of the column with response in it (defaults to Y)
         output:
             sds
         """
         df = df_original.copy()
         df['key'] = df.index
         response_col = 'Y'
+        # print(df[response_col])
         # train_df = df.copy()
         # train_df[self.name] = train_df[response_col].apply(lambda x: 0 if x in self.type_0 else (1 if x in self.type_1 else 'ROW_NOT_IN_REG') )
         # train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
+        # df = train_df
         if self.fitted_model == None:
             raise Exception('Must train model on data before it can be tested.')
-        y_pred = self.fitted_model.predict(df.drop(['key',response_col], axis=1))
-        df['y_pred'] = y_pred
-        self.predicted_df = df[['key','y_pred']]
+
+        if self.cutoff is not None:
+            y_pred = self.fitted_model.predict_proba(df.drop(['key',response_col], axis=1))[:, 1]
+            new_pred = np.where(y_pred > self.cutoff, 1, 0)
+            df['y_pred'] = new_pred
+            self.predicted_df = df[['key','y_pred']]
+        else:
+            y_pred = self.fitted_model.predict(df.drop(['key',response_col], axis=1))
+            df['y_pred'] = y_pred
+            self.predicted_df = df[['key','y_pred']]
+
+        # if self.score_type == 'accuracy' or 'ROC':
+        #     self.score = accuracy_score(df.loc[df['y_pred'].isin([0,1]), response_col].tolist(), df['y_pred'].tolist())
+        #     print(self.name)
+        #     print(self.score)
+        # elif self.score_type == 'ROC':
+        #     self.score = roc_auc_score(df.loc[df['y_pred'].isin([0,1]), response_col].tolist(), df['y_pred'].tolist())
+        # elif self.score_type == 'f1':
+        #     self.score = f1_score(df.loc[df['y_pred'].isin([0,1]),response_col].tolist(), df['y_pred'].tolist())
+
         return self.predicted_df
 
+    def model_score(self):
+        if self.y_pred is None or self.y_target is None:
+            raise Exception ('Must run predict on a model before scoring it.')
+        else:
+            if self.score_type == 'accuracy' or 'ROC':
+                self.score = round(accuracy_score(self.y_target,self.y_pred.tolist()), 3)
+            elif self.score_type == 'ROC':
+                self.score = round(roc_auc_score(self.y_target,self.y_pred.tolist()), 3)
+            elif self.score_type == 'f1':
+                self.score = round(f1_score(self.y_target,self.y_pred.tolist()), 3)
+            return self.score
+        
     def predict_individual(self, df_original: pd.DataFrame):
         """
         Tests the model on a given set of data and scores the model independently of the others
@@ -153,30 +216,34 @@ class single_model(model):
         train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
         if self.fitted_model == None:
             raise Exception('Must train model on data before it can be tested.')
-        y_pred = self.fitted_model.predict(train_df.drop(['key',response_col, self.name], axis=1))
-        train_df['y_pred'] = y_pred
+        # y_pred = self.fitted_model.predict(train_df.drop(['key',response_col, self.name], axis=1))
+        # train_df['y_pred'] = y_pred
+        # self.predicted_df = train_df[['key','y_pred']]
+
+        y_prob = self.fitted_model.predict_proba(train_df.drop(['key',response_col, self.name], axis=1))[:, 1]
+        new_pred = np.where(y_prob > self.cutoff, 1, 0)
+        train_df['y_pred'] = new_pred
+        y_pred = new_pred
         self.predicted_df = train_df[['key','y_pred']]
+
         self.y_pred = y_pred
         self.y_target = train_df[self.name].tolist()
         
+        if self.score_type == 'accuracy' or 'ROC':
+            self.score = accuracy_score(self.y_target,self.y_pred.tolist())
+        elif self.score_type == 'ROC':
+            self.score = roc_auc_score(self.y_target,self.y_pred.tolist())
+        elif self.score_type == 'f1':
+            self.score = f1_score(self.y_target,self.y_pred.tolist())
+
         return self.predicted_df
-    
-    def model_score(self):
-        if self.y_pred is None or self.y_target is None:
-            raise Exception ('Must run predict on a model before scoring it.')
-        else:
-            if self.score_type == 'accuracy':
-                self.score = accuracy_score(self.y_target,self.y_pred.tolist())
-            else:
-                self.score = accuracy_score(self.y_target,self.y_pred.tolist())
-            return self.score
     
     def get_prediction(self):
         return self.predicted_df
 
 class tree_model(model):
     # name of model needs to be recognizable or some combination of the submodels
-    def __init__(self, name, model_list, tree_struct):
+    def __init__(self, name, model_list, tree_struct, score_type='accuracy'):
         """
         
         input:
@@ -190,8 +257,14 @@ class tree_model(model):
         #sort model list
         self.predicted_df = None
         self.tree_struct = tree_struct
+        self.score = None
+        if score_type == 'accuracy':
+            self.score_type = 'accuracy'
+        elif score_type == 'f1':
+            self.score_type = 'f1'
+        else:
+            self.score_type = 'accuracy'
 
-    
     def train(self):
         """
         By design we feed tree model pretrained models
@@ -232,11 +305,18 @@ class tree_model(model):
                     except Exception as e:
                         print(e)
                         raise e
-                        break
 
         df_key['y_pred'] = list_pred
         self.predicted_df= df_key[['key','y_pred']]
         return self.predicted_df
-
-
-        # merged_df = slice_X1_test.merge(slice_x2_data, on='key', how='left').merge(slice_x3_data, on='key', how='left')
+    
+    def model_score(self, y_test):
+        df_pred = self.predicted_df['y_pred']
+        if self.score_type == 'accuracy' or 'ROC':
+            self.score = accuracy_score(y_test,df_pred.tolist())
+        elif self.score_type == 'ROC':
+            self.score = roc_auc_score(y_test,df_pred.tolist())
+        elif self.score_type == 'f1':
+            self.score = f1_score(y_test,df_pred.tolist())
+        return self.score
+        

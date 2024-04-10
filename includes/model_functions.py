@@ -3,10 +3,18 @@ import pandas as pd
 import includes.model as mod
 from itertools import combinations
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, roc_curve, f1_score, precision_recall_curve
+from sklearn.model_selection import cross_val_predict
+from sklearn import metrics
 import random 
 import numpy as np
-
+import matplotlib.pyplot as plt
+import scikitplot as skplt
+import matplotlib.pyplot as plt
+import networkx as nx
+from networkx.drawing.nx_pydot import graphviz_layout
+from datetime import datetime 
+import os
 
 def save_model(path, model):
     """
@@ -35,7 +43,7 @@ def build_single_models(models_list: list, train_data, score_type='accuracy', tr
     input:
         models_list: list of 2 elements lists with models to be produced e.g [[(1,2,3),(4,)],[(1,3), (2,)]]
         train_data: data that will be used to train all models 
-        score_type: The metric we are looking to maximuse
+        score_type: The metric we are looking to maximise
     output:
         returns list of models
     """
@@ -197,7 +205,7 @@ def stepwise_tree_layer_by_layer(categories, X1_train, X1_test, total_tree):
 
     return list(set(total_tree + total2))
 
-def stepwise_inclusion(left_list, right_list, X_train, X_test, train_type='LogisticRegression'): 
+def stepwise_inclusion(left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'): 
     # Returns best_model and best_score as tuple (best_model, best_score)
     model_list = []
     for i in right_list:
@@ -205,14 +213,14 @@ def stepwise_inclusion(left_list, right_list, X_train, X_test, train_type='Logis
         model_def = [tuple(tuple(left_list) + (i,)), all_but_one]
         model_list.append(model_def)
     
-    model = build_single_models(model_list, X_train, train_type=train_type)
+    model = build_single_models(model_list, X_train, score_type=score_type, train_type=train_type)
     tested_mods = test_single_models(model,X_test)
     sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
     best_mod = sorted_d_desc[0][0]
     best_score = sorted_d_desc[0][1]
     return best_mod, best_score
     
-def stepwise_exclusion(left_list, right_list, X_train, X_test, train_type='LogisticRegression'):
+def stepwise_exclusion(left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'):
     # Returns best_model and best_score as tuple (best_model, best_score)
     model_list = []
     for i in left_list:
@@ -220,7 +228,7 @@ def stepwise_exclusion(left_list, right_list, X_train, X_test, train_type='Logis
         model_def = [tuple(tuple(right_list) + (i,)), all_but_one]
         model_list.append(model_def)
     
-    model = build_single_models(model_list, X_train, train_type=train_type)
+    model = build_single_models(model_list, X_train, score_type=score_type, train_type=train_type)
     tested_mods = test_single_models(model, X_test)
     sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
     best_mod_ordered = (sorted_d_desc[0][0][1], sorted_d_desc[0][0][0])
@@ -260,7 +268,7 @@ def stepwise_single_layer(categories, X_train, X_test, model_type='LogisticRegre
             continue
     return best_mod
 
-def stepwise_layer_finder(categories, X_train, X_test, model_type='LogisticRegression'):
+def stepwise_layer_finder(categories, X_train, X_test, model_type='LogisticRegression', score_type='accuracy'):
     best_mod, best_score = new_mod, new_score = stepwise_inclusion([], categories, X_train, X_test)
     failed_model_counter = 0
     run_inclusion = True
@@ -274,8 +282,9 @@ def stepwise_layer_finder(categories, X_train, X_test, model_type='LogisticRegre
         else:
             run_mod = new_mod
             run_score = new_score       
+
         if run_inclusion:
-            new_mod, new_score = stepwise_inclusion(run_mod[0], run_mod[1], X_train, X_test, model_type)
+            new_mod, new_score = stepwise_inclusion(run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
             if new_score > best_score:
                 best_mod = new_mod
                 best_score = new_score
@@ -285,7 +294,7 @@ def stepwise_layer_finder(categories, X_train, X_test, model_type='LogisticRegre
                 run_inclusion = True
                 failed_model_counter += 1
         else:
-            new_mod, new_score = stepwise_exclusion(run_mod[0], run_mod[1], X_train, X_test, model_type)
+            new_mod, new_score = stepwise_exclusion(run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
             if new_score > best_score:
                 best_mod = new_mod
                 best_score = new_score      
@@ -298,7 +307,7 @@ def stepwise_layer_finder(categories, X_train, X_test, model_type='LogisticRegre
                 failed_model_counter += 1
     return best_mod
 
-def stepwise_tree_finder(categories, X1_train, X1_test, total_tree):
+def stepwise_tree_finder(categories, X1_train, X1_test, total_tree, model_type='LogisticRegression', score_type='accuracy'):
     """
     Build this tree in a stepwise recursive way
     input:
@@ -317,7 +326,8 @@ def stepwise_tree_finder(categories, X1_train, X1_test, total_tree):
         else:
             return total_tree
     
-    highest_model = stepwise_layer_finder(categories, X1_train, X1_test)
+    X1_train, X1_test = split_data_set(categories, X1_train)
+    highest_model = stepwise_layer_finder(categories, X1_train, X1_test, model_type, score_type)
     total_tree.append(highest_model)
 
     total1 = stepwise_tree(tuple(highest_model[0]), X1_train, X1_test, total_tree)
@@ -343,14 +353,118 @@ def stepwise_tree(categories, X1_train, X1_test, total_tree):
             return list(set(total_tree + [two_cat_mod]))
         else:
             return total_tree
-    
-    highest_model = stepwise_single_layer(categories, X1_train, X1_test)
+    X_train, X_test = split_data_set(categories, X1_train)
+    highest_model = stepwise_single_layer(categories, X_train, X_test)
     total_tree.append(highest_model)
 
     total1 = stepwise_tree(tuple(highest_model[0]), X1_train, X1_test, total_tree)
     total2 = stepwise_tree(tuple(highest_model[1]), X1_train, X1_test, total1+total_tree)
 
     return list(set(total_tree + total2))
+
+def split_data_set(categories, data):
+    cut_data_set = data.loc[data['Y'].isin(categories)]
+    X_train, X_test, y_train, y_test = train_test_split(cut_data_set, cut_data_set['Y'], test_size=0.2, random_state=42)
+    return (X_train, X_test)
+
+def to_labels(probs: np.ndarray, threshold: float) -> np.ndarray:
+    """Convert probabilities to binary labels based on the given threshold."""
+    return (probs >= threshold).astype(int)
+    
+def find_cutoff(model, data_df, Y, type='ROC'):
+    """
+    Find the cutoff point for a given model
+    input:
+        model: Model to find cutoff for. Only models that work with predict_proba will work
+        data_df: Dataframe with data
+        Y: target column 
+        type: which cutoff to look for: default to ROC
+    output:
+        list of binary comparisons
+    """
+    predict_probabilities = cross_val_predict(model, data_df, Y, method='predict_proba')[:, 1]
+
+    if type == 'ROC':
+        # Find Cutoff using Youden's J statistic
+        fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+        optimal_idx = np.argmax(tpr - fpr)
+        cutoff = thresholds[optimal_idx]
+    
+    elif type == 'precision-recall':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        precision, recall, thresholds = precision_recall_curve(Y, predict_probabilities)
+        fscore = (2 * precision * recall) / (precision + recall)
+        ix = np.argmax(fscore)
+        cutoff = thresholds[ix]
+    
+    elif type == 'f1':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        thresholds = np.arange(0, 1, 0.01)
+        scores = [f1_score(Y, to_labels(predict_probabilities, t)) for t in thresholds]
+        # y_pred = predict_probabilities[:, None] >= thresholds
+        # scores = [f1_score(Y, y_pred[:, i].astype(int)) for i in range(y_pred.shape[1])]
+        cutoff = thresholds[np.argmax(scores)]
+    
+    elif type == 'accuracy':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        thresholds = np.arange(0, 1, 0.001)
+        scores = [accuracy_score(Y, to_labels(predict_probabilities, t)) for t in thresholds]
+        cutoff = thresholds[np.argmax(scores)]
+    return cutoff
+
+def graph_model(tree_model):
+    """
+    Draws the dot graph for a given model
+    input:
+        tree_model: A fully trained tree model
+    output:
+        saves the image of a model to the /models folder
+    """
+    max_width_px, max_height_px = 1920, 1080  # Adjust as needed
+    dpi = 300  # High DPI for good quality
+
+    # Calculate figure size in inches
+    fig_width_inch = max_width_px / dpi
+    fig_height_inch = max_height_px / dpi
+
+    # Create figure with calculated size
+    plt.figure(figsize=(fig_width_inch, fig_height_inch))
+    G = nx.DiGraph()
+    edges = []
+    for i in tree_model.models:
+        G.add_node(i.name, info=f"{i.model_type} \n {i.score_type} is {i.score}")
+        type_0 = i.type_0_categories
+        if len(type_0) > 1:
+            type_0_obj = [obj for obj in tree_model.models if sorted(obj.all_cat_tested) == sorted(type_0)][0]
+            edges += [(str(i.name),str(type_0_obj.name))]
+        else:
+            edges += [(str(i.name),str(type_0))]
+        
+        type_1 = i.type_1_categories
+        if len(type_1) > 1:
+            type_1_obj = [obj for obj in tree_model.models if sorted(obj.all_cat_tested) == sorted(type_1)][0]
+            edges += [(str(i.name),str(type_1_obj.name))]
+        else:
+            edges += [(str(i.name),str(type_1))]
+
+    print(edges)
+    G.add_edges_from(edges)
+
+    # Draw the graph
+    pos = nx.spring_layout(G)  # positions for all nodes
+    pos = graphviz_layout(G, prog="dot")
+    plt.figure(figsize=(fig_width_inch, fig_height_inch))
+    nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=400, edge_color='k', linewidths=1, font_size=7, arrows=True)
+    # Custom step: Add node names above and additional information below the nodes
+    for node, (x, y) in pos.items():
+        plt.text(x, y-25, G.nodes[node].get("info", ""), ha='center', fontsize=3, bbox=dict(facecolor='white', alpha=0.8))
+
+    plt.figtext(0.85, 0.95, f"The {tree_model.score_type} of this tree is {tree_model.score}", ha="center", fontsize=8, bbox=dict(boxstyle="round,pad=0.2", facecolor='lightblue', edgecolor='black'))
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Saving the plot to the specified directory
+    plt.savefig(f'models/plot_{timestamp}.png', dpi=600, bbox_inches='tight')
 
 def defined_all_models(n: int):
     """
@@ -424,3 +538,9 @@ def single_models_from_trees(trees_total):
     total_models = [sorted(branch, key=lambda x: len(x), reverse=True)  for tree in trees_total for branch in tree]
     return_model = [list(t) for t in set(tuple(e) for e in total_models)]
     return return_model
+
+def plot_roc_curve(y_true, y_probs):
+    
+    #used code from stack overflow: https://stackoverflow.com/questions/25009284/how-to-plot-roc-curve-in-python
+    skplt.metrics.plot_roc_curve(y_true, y_probs)
+    plt.show()
