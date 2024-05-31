@@ -27,9 +27,26 @@ import os
 
 
 def main(config):
+    # config.log.info('Max Rocks')
+    # config.log.error('This is an extra long message about how there was an error because Max wants to see if there is a weird format when messages get extra long.')
+    # config.log.debug('THIS SHOULDNT LOG')
+    # return
+    config.log.info('Beginning of the function.')
     df = pd.read_csv('new_100k_10_cat.csv')
-    df.drop(df.columns[0], axis=1,inplace=True)    
+    df.drop(df.columns[0], axis=1,inplace=True)  
+    # df = df.head(1000)  
     X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42) 
+    score_type = 'accuracy'
+    categories = tuple((0,1,2,3,4,5,6,7,8,9))
+    model_types = ['randomForest', 'LogisticRegression', 'xgboost']
+    config.log.info('Beginning of stepwise tree finder.')
+    best_tree = mf.stepwise_tree_finder(config, categories, X_train, X_test, {}, model_types=model_types, score_type=score_type)
+    config.log.info('Finished stepwise tree finder.')
+    model_strucs = list(best_tree.keys())
+    tree_types = list(best_tree.values())
+    best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories)
+    mf.graph_model(best_trained_model)
+    return
 
     best_cutoff_tree = [((3,), (4,)), ((6,), (7, 8)), ((7,), (8,)), ((5,), (6, 7, 8)), ((1,), (0, 2)), ((0,), (2,)), ((9, 6, 7, 8, 5), (0, 1, 2, 3, 4)), ((9,), (6, 7, 8, 5)), ((3, 4), (0, 1, 2))]
     best_overall_tree = [[(0, 1, 2, 3, 4), (5, 6, 7, 8, 9)], [(0, 1, 2), (3, 4)], [(5, 6, 7, 8), (9,)], [(0, 2), (1,)], [(3,), (4,)], [(5, 6), (7, 8)], [(0,), (2,)], [(5,), (6,)], [(7,), (8,)]]    
@@ -43,9 +60,8 @@ def main(config):
     my_tree = best_overall_tree
     sorted_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in my_tree]
     concatenated_tree = [sorted(a + b) for a, b in sorted_tree]
-    built_mods = mf.build_single_models(sorted_tree, X_train, score_type='accuracy')
+    built_mods = mf.build_single_models(config, sorted_tree, X_train, score_type='accuracy')
     mf.test_single_models(built_mods, X_test)
-    print(built_mods)
 
     built_mods = list(built_mods.values())
     tree_model = mod.tree_model('tree_mod1', built_mods, concatenated_tree)

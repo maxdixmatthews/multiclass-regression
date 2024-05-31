@@ -3,7 +3,7 @@ import pandas as pd
 import includes.model as mod
 from itertools import combinations
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, roc_curve, f1_score, precision_recall_curve
+from sklearn.metrics import accuracy_score, roc_curve, f1_score, precision_recall_curve, classification_report
 from sklearn.model_selection import cross_val_predict
 from sklearn import metrics
 import random 
@@ -15,6 +15,30 @@ import networkx as nx
 from networkx.drawing.nx_pydot import graphviz_layout
 from datetime import datetime 
 import os
+
+def read_arff(file_path, columns = None):
+    with open(file_path, 'r') as file:
+        data = file.readlines()
+
+    # Find the lines between the '@data' tag and the end of the file
+    start_index = 0
+    for index, line in enumerate(data):
+        if '@data' in line.lower():
+            start_index = index + 1
+            break
+
+    # Now extract the data, removing any empty lines
+    data = data[start_index:]
+    data = [line.strip() for line in data if line.strip()]
+
+    # Convert list of strings to a large string to imitate a CSV file reading
+    from io import StringIO
+    data_str = '\n'.join(data)
+    data_io = StringIO(data_str)  # Use StringIO to convert string to file-like object
+
+    # Assuming that the data part is comma-separated
+    df = pd.read_csv(data_io, names=columns)
+    return df
 
 def save_model(path, model):
     """
@@ -37,10 +61,11 @@ def read_model(path: str):
     """
     return load(path)
 
-def build_single_models(models_list: list, train_data, score_type='accuracy', train_type='LogisticRegression') -> list:
+def build_single_models(config, models_list: list, train_data, score_type='accuracy', train_type='LogisticRegression') -> list:
     """
     Builds all single models
     input:
+        config: config object
         models_list: list of 2 elements lists with models to be produced e.g [[(1,2,3),(4,)],[(1,3), (2,)]]
         train_data: data that will be used to train all models 
         score_type: The metric we are looking to maximise
@@ -49,10 +74,18 @@ def build_single_models(models_list: list, train_data, score_type='accuracy', tr
     """
     trained_model_lists = dict()
 
-    for i in models_list:
-        new_mod = mod.single_model(i, score_type=score_type)
-        new_mod.train(train_data, model_type = train_type)
-        trained_model_lists[tuple(i)] = new_mod
+    if isinstance(train_type, list):
+        for i in range(len(models_list)):
+            new_mod = mod.single_model(models_list[i], score_type=score_type)
+            new_mod.train(train_data, model_type = train_type[i])
+            trained_model_lists[tuple(models_list[i])] = new_mod
+            config.log.debug(f'Finished training model {models_list[i]}')
+    else:
+        for i in range(len(models_list)):
+            new_mod = mod.single_model(models_list[i], score_type=score_type)
+            new_mod.train(train_data, model_type = train_type)
+            trained_model_lists[tuple(models_list[i])] = new_mod
+            config.log.debug(f'Finished training model {models_list[i]}')
     return trained_model_lists
 
 def test_single_models(models: list, x_test_data):
@@ -79,7 +112,7 @@ def find_best_mod_given_categories(categories, all_model_struc, X1_train, X1_tes
         The top model
     """  
     layered_models = [model for model in all_model_struc if sorted(list(categories)) == sorted(list(set(model[0]+model[1])))]
-    all_layer_models = build_single_models(layered_models, X1_train)
+    all_layer_models = build_single_models(config, layered_models, X1_train)
 
     scores_2_r = test_single_models(all_layer_models, X1_test)
     highest_model = all_layer_models[max(scores_2_r, key=scores_2_r.get)] 
@@ -205,22 +238,21 @@ def stepwise_tree_layer_by_layer(categories, X1_train, X1_test, total_tree):
 
     return list(set(total_tree + total2))
 
-def stepwise_inclusion(left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'): 
+def stepwise_inclusion(config, left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'): 
     # Returns best_model and best_score as tuple (best_model, best_score)
     model_list = []
     for i in right_list:
         all_but_one = tuple(x for x in right_list if x != i)
         model_def = [tuple(tuple(left_list) + (i,)), all_but_one]
         model_list.append(model_def)
-    
-    model = build_single_models(model_list, X_train, score_type=score_type, train_type=train_type)
+    model = build_single_models(config, model_list, X_train, score_type=score_type, train_type=train_type)
     tested_mods = test_single_models(model,X_test)
     sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
     best_mod = sorted_d_desc[0][0]
     best_score = sorted_d_desc[0][1]
     return best_mod, best_score
     
-def stepwise_exclusion(left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'):
+def stepwise_exclusion(config, left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'):
     # Returns best_model and best_score as tuple (best_model, best_score)
     model_list = []
     for i in left_list:
@@ -228,7 +260,7 @@ def stepwise_exclusion(left_list, right_list, X_train, X_test, train_type='Logis
         model_def = [tuple(tuple(right_list) + (i,)), all_but_one]
         model_list.append(model_def)
     
-    model = build_single_models(model_list, X_train, score_type=score_type, train_type=train_type)
+    model = build_single_models(config, model_list, X_train, score_type=score_type, train_type=train_type)
     tested_mods = test_single_models(model, X_test)
     sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
     best_mod_ordered = (sorted_d_desc[0][0][1], sorted_d_desc[0][0][0])
@@ -268,8 +300,8 @@ def stepwise_single_layer(categories, X_train, X_test, model_type='LogisticRegre
             continue
     return best_mod
 
-def stepwise_layer_finder(categories, X_train, X_test, model_type='LogisticRegression', score_type='accuracy'):
-    best_mod, best_score = new_mod, new_score = stepwise_inclusion([], categories, X_train, X_test)
+def stepwise_layer_finder(config, categories, X_train, X_test, model_type='LogisticRegression', score_type='accuracy'):
+    best_mod, best_score = new_mod, new_score = stepwise_inclusion(config, [], categories, X_train, X_test, train_type=model_type)
     failed_model_counter = 0
     run_inclusion = True
  
@@ -284,17 +316,20 @@ def stepwise_layer_finder(categories, X_train, X_test, model_type='LogisticRegre
             run_score = new_score       
 
         if run_inclusion:
-            new_mod, new_score = stepwise_inclusion(run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
+            new_mod, new_score = stepwise_inclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
             if new_score > best_score:
                 best_mod = new_mod
                 best_score = new_score
                 run_inclusion = False
                 failed_model_counter = 0
             else:
-                run_inclusion = True
+                if len(new_mod[1]) == 1:
+                    run_inclusion = False
+                else:
+                    run_inclusion = True
                 failed_model_counter += 1
         else:
-            new_mod, new_score = stepwise_exclusion(run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
+            new_mod, new_score = stepwise_exclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
             if new_score > best_score:
                 best_mod = new_mod
                 best_score = new_score      
@@ -305,12 +340,13 @@ def stepwise_layer_finder(categories, X_train, X_test, model_type='LogisticRegre
             else:
                 run_inclusion = True
                 failed_model_counter += 1
-    return best_mod
+    return best_mod, best_score
 
-def stepwise_tree_finder(categories, X1_train, X1_test, total_tree, model_type='LogisticRegression', score_type='accuracy'):
+def stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, model_types=['LogisticRegression'], score_type='accuracy'):
     """
     Build this tree in a stepwise recursive way
     input:
+        config: config object
         categories: a tuple of the lists 
         all_model_struc: a list of all models
         X1_train: the x train data
@@ -319,21 +355,45 @@ def stepwise_tree_finder(categories, X1_train, X1_test, total_tree, model_type='
     output:
         list of binary comparisons
     """
+    X_train, X_test = split_data_set(categories, X1_train)
     if len(categories) <= 2:
         if len(categories) == 2:
             two_cat_mod = ((categories[0],), (categories[1],))
-            return list(set(total_tree + [two_cat_mod]))
+            top_score = 0
+            top_model = 0
+            for mod_type in model_types:
+                new_mod = build_single_models(config, [two_cat_mod], X_train, score_type=score_type, train_type=mod_type)
+                tested_mods = test_single_models(new_mod, X_test)
+                sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
+                score = sorted_d_desc[0][1]
+                if score > top_score:
+                    top_score = score
+                    top_model_type = mod_type
+            total_tree[two_cat_mod] = top_model_type
+            config.log.info(f'Stepwise layer found best split: {two_cat_mod} with mod type {top_model_type}')
+
+            return total_tree
         else:
             return total_tree
     
-    X1_train, X1_test = split_data_set(categories, X1_train)
-    highest_model = stepwise_layer_finder(categories, X1_train, X1_test, model_type, score_type)
-    total_tree.append(highest_model)
-
-    total1 = stepwise_tree(tuple(highest_model[0]), X1_train, X1_test, total_tree)
-    total2 = stepwise_tree(tuple(highest_model[1]), X1_train, X1_test, total1+total_tree)
-
-    return list(set(total_tree + total2))
+    top_score = 0
+    top_model = None
+    top_model_type = None
+    for mod_type in model_types:
+        config.log.info(f'Finding stepwise layer for {mod_type} with categories: {categories}')
+        highest_model, best_score = stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
+        config.log.info(f'Stepwise layer for {mod_type}: {highest_model} is {best_score}')
+        if best_score > top_score:
+            top_score = best_score
+            top_model = highest_model
+            top_model_type = mod_type
+            
+    config.log.info(f'Stepwise layer found best split: {top_model} with mod type {top_model_type}')
+    total_tree[top_model] = top_model_type
+    total1 = stepwise_tree_finder(config, tuple(top_model[0]), X1_train, X1_test, total_tree, model_types=model_types, score_type=score_type)
+    total2 = stepwise_tree_finder(config, tuple(top_model[1]), X1_train, X1_test, total1, model_types=model_types, score_type=score_type)
+    
+    return total2
 
 def stepwise_tree(categories, X1_train, X1_test, total_tree):
     """
@@ -384,7 +444,7 @@ def find_cutoff(model, data_df, Y, type='ROC'):
     """
     predict_probabilities = cross_val_predict(model, data_df, Y, method='predict_proba')[:, 1]
 
-    if type == 'ROC':
+    if type == 'ROC' or type == 'accuracy':
         # Find Cutoff using Youden's J statistic
         fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
         optimal_idx = np.argmax(tpr - fpr)
@@ -400,7 +460,7 @@ def find_cutoff(model, data_df, Y, type='ROC'):
     elif type == 'f1':
         #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
         thresholds = np.arange(0, 1, 0.01)
-        scores = [f1_score(Y, to_labels(predict_probabilities, t)) for t in thresholds]
+        scores = [(Y, to_labels(predict_probabilities, t)) for t in thresholds]
         # y_pred = predict_probabilities[:, None] >= thresholds
         # scores = [f1_score(Y, y_pred[:, i].astype(int)) for i in range(y_pred.shape[1])]
         cutoff = thresholds[np.argmax(scores)]
@@ -412,7 +472,7 @@ def find_cutoff(model, data_df, Y, type='ROC'):
         cutoff = thresholds[np.argmax(scores)]
     return cutoff
 
-def graph_model(tree_model):
+def graph_model(config, tree_model):
     """
     Draws the dot graph for a given model
     input:
@@ -420,6 +480,7 @@ def graph_model(tree_model):
     output:
         saves the image of a model to the /models folder
     """
+    config.log.info(f'Plotting tree: {tree_model}')
     max_width_px, max_height_px = 1920, 1080  # Adjust as needed
     dpi = 300  # High DPI for good quality
 
@@ -446,8 +507,6 @@ def graph_model(tree_model):
             edges += [(str(i.name),str(type_1_obj.name))]
         else:
             edges += [(str(i.name),str(type_1))]
-
-    print(edges)
     G.add_edges_from(edges)
 
     # Draw the graph
@@ -465,6 +524,7 @@ def graph_model(tree_model):
 
     # Saving the plot to the specified directory
     plt.savefig(f'models/plot_{timestamp}.png', dpi=600, bbox_inches='tight')
+    config.log.info(f'Model diagram saved here: models/plot_{timestamp}.png')
 
 def defined_all_models(n: int):
     """
@@ -544,3 +604,22 @@ def plot_roc_curve(y_true, y_probs):
     #used code from stack overflow: https://stackoverflow.com/questions/25009284/how-to-plot-roc-curve-in-python
     skplt.metrics.plot_roc_curve(y_true, y_probs)
     plt.show()
+
+def sort_with_type_check(t):
+        return sorted(t, key=lambda x: (str(type(x)), x))
+    
+def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories):
+    # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
+    built_mods = build_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
+    test_single_models(built_mods, X_test)
+    built_mods = list(built_mods.values())
+    config.log.info(f'Best models are {built_mods}')
+    tree_model = mod.tree_model('tree_mod1', built_mods, best_tree)
+    output = tree_model.predict(X_test)
+    tree_model.model_score(y_test.tolist())
+    accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
+    config.log.info(f'Accuracy is {accuracy}')
+    string_categories = [str(i) for i in categories]
+    config.log.info(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=string_categories))
+    print(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=string_categories))
+    return tree_model

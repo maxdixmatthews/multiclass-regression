@@ -50,6 +50,18 @@ def main(config):
     X_test = pd.DataFrame(scaler.transform(X_test))
     X_train['Y'] = y_train
     X_test['Y'] = y_test
+    score_type = 'accuracy'
+    categories = tuple((0,1,2,3,4,5,6,7,8,9))
+    model_types = ['LogisticRegression', 'xgboost']
+    # model_types = ['LogisticRegression']
+    config.log.info('Beginning of stepwise tree finder.')
+    best_tree = mf.stepwise_tree_finder(config, categories, X_train, X_test, {}, model_types=model_types, score_type=score_type)
+    config.log.info('Finished stepwise tree finder.')
+    model_strucs = list(best_tree.keys())
+    tree_types = list(best_tree.values())
+    best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories)
+    mf.graph_model(best_trained_model)
+    return
     ## Best struct
     # found_best_mod_struc = [[(1, 3, 8, 9), (4,)], [(2,), (0, 1, 3, 4, 5, 6, 7, 8, 9)], [(3, 8), (1, 9)], [(1,), (9,)], [(1, 3, 4, 7, 8, 9), (5, 6)], [(1, 3, 4, 8, 9), (7,)], [(0,), (1, 3, 4, 5, 6, 7, 8, 9)], [(5,), (6,)], [(3,), (8,)]]
     found_best_mod_struc = [[(0, 1, 2, 3, 4), (5, 6, 7, 8, 9)], [(0, 1, 2), (3, 4)], [(5, 6, 7, 8), (9,)], [(0, 2), (1,)], [(3,), (4,)], [(5, 6), (7, 8)], [(0,), (2,)], [(5,), (6,)], [(7,), (8,)]]    

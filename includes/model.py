@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 from sklearn import svm
+from sklearn.ensemble import RandomForestClassifier
 import includes.model_functions as mf
 
 class model(ABC):
@@ -63,12 +64,14 @@ class single_model(model):
             sds
         """
         # Setup
+        if model_type is None:
+            model_type = 'LogisticRegression'
+        self.model_type = model_type
         train_df = df.copy()
         train_df[self.name] = train_df[response_col].apply(lambda x: 0 if x in self.type_0 else (1 if x in self.type_1 else 'ROW_NOT_IN_REG') )
         train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
         Y = train_df[self.name].astype(int)
-        self.model_type = model_type
-
+        
         #Select model
         if model_type == 'LogisticRegression':
             model = LogisticRegression(solver='lbfgs', max_iter=2000)
@@ -78,16 +81,17 @@ class single_model(model):
             # optimal_idx = np.argmax(tpr - fpr)
             # self.cutoff = thresholds[optimal_idx]
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, 'f1')
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
 
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(objective="binary:logistic")
             # Find Cutoff using Youden's J statistic
-            predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
-            fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
-            optimal_idx = np.argmax(tpr - fpr)
-            self.cutoff = thresholds[optimal_idx]
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
+            # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+            # optimal_idx = np.argmax(tpr - fpr)
+            # self.cutoff = thresholds[optimal_idx]
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
 
             # model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
@@ -126,7 +130,10 @@ class single_model(model):
             #     **bayes_cv.best_params_
             # )
         elif model_type.lower() == 'svm':
-            model = svm.SVC()
+            model = svm.SVC(probability=True)
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'randomForest':
+            model = RandomForestClassifier(n_estimators = 100)
         else:
             model = LogisticRegression(solver='sag', max_iter=2000)
 
@@ -138,7 +145,7 @@ class single_model(model):
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
 
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, 'f1')
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             # XGBoost, Neural Network, Stukel model, anyother will work 
             # beat multinomial regression 
         model.fit(train_df.drop([response_col,self.name], axis=1), Y)
@@ -176,15 +183,6 @@ class single_model(model):
             df['y_pred'] = y_pred
             self.predicted_df = df[['key','y_pred']]
 
-        # if self.score_type == 'accuracy' or 'ROC':
-        #     self.score = accuracy_score(df.loc[df['y_pred'].isin([0,1]), response_col].tolist(), df['y_pred'].tolist())
-        #     print(self.name)
-        #     print(self.score)
-        # elif self.score_type == 'ROC':
-        #     self.score = roc_auc_score(df.loc[df['y_pred'].isin([0,1]), response_col].tolist(), df['y_pred'].tolist())
-        # elif self.score_type == 'f1':
-        #     self.score = f1_score(df.loc[df['y_pred'].isin([0,1]),response_col].tolist(), df['y_pred'].tolist())
-
         return self.predicted_df
 
     def model_score(self):
@@ -219,6 +217,15 @@ class single_model(model):
         # y_pred = self.fitted_model.predict(train_df.drop(['key',response_col, self.name], axis=1))
         # train_df['y_pred'] = y_pred
         # self.predicted_df = train_df[['key','y_pred']]
+        if self.cutoff is not None:
+            y_pred = self.fitted_model.predict_proba(df.drop(['key',response_col], axis=1))[:, 1]
+            new_pred = np.where(y_pred > self.cutoff, 1, 0)
+            df['y_pred'] = new_pred
+            self.predicted_df = df[['key','y_pred']]
+        else:
+            y_pred = self.fitted_model.predict(df.drop(['key',response_col], axis=1))
+            df['y_pred'] = y_pred
+            self.predicted_df = df[['key','y_pred']]
 
         y_prob = self.fitted_model.predict_proba(train_df.drop(['key',response_col, self.name], axis=1))[:, 1]
         new_pred = np.where(y_prob > self.cutoff, 1, 0)

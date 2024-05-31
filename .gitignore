@@ -3,3 +3,4 @@ __pycache__/
 
 # Ignore all files in the models directory
 /models/
+/logs/

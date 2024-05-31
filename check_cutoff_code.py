@@ -59,8 +59,8 @@ def main(config):
     # stepwise_models = mf.stepwise_tree_layer_by_layer(categories, X1_train, X1_test, [])
     start_time = time.perf_counter()
     score_type='accuracy'
-    # best_tree = mf.stepwise_tree_finder(categories, X_train, X_test, [], score_type=score_type)
-    best_tree = [((3,), (0, 1, 2, 4, 6, 7, 9)), ((7,), (6,)), ((9,), (7, 6)), ((8,), (0, 1, 2, 3, 4, 5, 6, 7, 9)), ((4,), (0, 1, 2)), ((1,), (0, 2)), ((5,), (0, 1, 2, 3, 4, 6, 7, 9)), ((0,), (2,)), ((7, 6, 9), (0, 1, 2, 4))]
+    best_tree = mf.stepwise_tree_finder(config, categories, X_train, X_test, [], score_type=score_type)
+    # best_tree = [((3,), (0, 1, 2, 4, 6, 7, 9)), ((7,), (6,)), ((9,), (7, 6)), ((8,), (0, 1, 2, 3, 4, 5, 6, 7, 9)), ((4,), (0, 1, 2)), ((1,), (0, 2)), ((5,), (0, 1, 2, 3, 4, 6, 7, 9)), ((0,), (2,)), ((7, 6, 9), (0, 1, 2, 4))]
     #best_tree = [((3,), (0, 1, 2, 4, 6, 7, 9)), ((7,), (6,)), ((9,), (7, 6)), ((8,), (0, 1, 2, 3, 4, 5, 6, 7, 9)), ((4,), (0, 1, 2)), ((1,), (0, 2)), ((5,), (0, 1, 2, 3, 4, 6, 7, 9)), ((0,), (2,)), ((7, 6, 9), (0, 1, 2, 4))]
     # best_tree = [[(0, 1, 2, 3, 4), (5, 6, 7, 8, 9)], [(0, 1, 2), (3, 4)], [(5, 6, 7, 8), (9,)], [(0, 2), (1,)], [(3,), (4,)], [(5, 6), (7, 8)], [(0,), (2,)], [(5,), (6,)], [(7,), (8,)]]    
     # print(mf.stepwise_inclusion((0, 1, 2, 3), (4, 5, 6, 7, 8, 9), X_train, X_test))
@@ -72,14 +72,16 @@ def main(config):
 
     # Apply the sorting strategy considering type
     normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree]
-    built_mods = mf.build_single_models(normalized_tree, X_train, score_type=score_type)
+    built_mods = mf.build_single_models(config, normalized_tree, X_train, score_type=score_type)
     built_mods = list(built_mods.values())
+    config.log.info(f'Best models are {built_mods}')
     tree_model = mod.tree_model('tree_mod1', built_mods, normalized_tree)
     print(tree_model.tree_struct)
     output = tree_model.predict(X_test)
     tree_model.model_score(y_test.tolist())
     accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
     print(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=['0','1','2','3','4','5','6','7','8','9']))
+    config.log.info(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=['0','1','2','3','4','5','6','7','8','9']))
     # print(f1_score(y_test.tolist(), output['y_pred'].to_list(), average='weighted'))
     print(accuracy)
 
