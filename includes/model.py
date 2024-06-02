@@ -134,7 +134,9 @@ class single_model(model):
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'randomForest':
             model = RandomForestClassifier(n_estimators = 100)
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         else:
+            print(f"nothing found for {model_type.lower()}")
             model = LogisticRegression(solver='sag', max_iter=2000)
 
             # Find Cutoff using Youden's J statistic

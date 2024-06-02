@@ -24,18 +24,18 @@ import networkx as nx
 from networkx.drawing.nx_pydot import graphviz_layout
 from datetime import datetime 
 import os
+import argparse
 
 
-def main():
+def main(filename, model_types):
     # config.log.info('Max Rocks')
     # config.log.error('This is an extra long message about how there was an error because Max wants to see if there is a weird format when messages get extra long.')
     # config.log.debug('THIS SHOULDNT LOG')
     # return
-    list_of_data = ["new_100k_10_cat.csv", "new_100k_6_cat.csv"]
-    for dataset in list_of_data:
-        process_dataset(dataset)
-
-def process_dataset(dataset):
+    print(filename)
+    if len(filename) <= 1:
+        raise Exception(f"Improper filename of: {filename}")
+    dataset = filename
     config = Config(dataset)
     config.log.info(f'Beginning of {dataset}.')
     df = pd.read_csv(dataset)
@@ -46,7 +46,6 @@ def process_dataset(dataset):
     # categories = tuple((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))  
     categories = tuple(df['Y'].unique())
 
-    model_types = ['randomForest', 'LogisticRegression', 'xgboost']
     config.log.info('Beginning of stepwise tree finder.')
     best_tree = mf.stepwise_tree_finder(config, categories, X_train, X_test, {}, model_types=model_types, score_type=score_type)
     config.log.info('Finished stepwise tree finder.')
@@ -56,4 +55,8 @@ def process_dataset(dataset):
     mf.graph_model(config, best_trained_model)
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('-f', '--filename', required=True, type=str, help='The name of the file to process')
+    parser.add_argument('-m', '--model_types', type=str, nargs='*', default=['randomForest', 'LogisticRegression', 'xgboost'], help='An optional list models to be tested out of randomForest, LogisticRegression, xgboost, svm.')
+    args = parser.parse_args()  
+    main(args.filename, args.model_types)
