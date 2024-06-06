@@ -1,6 +1,8 @@
 __pycache__/
 *.py[cod]
+*.log
 
 # Ignore all files in the models directory
 /models/
 /logs/
+/venv/

@@ -472,7 +472,7 @@ def find_cutoff(model, data_df, Y, type='ROC'):
         cutoff = thresholds[np.argmax(scores)]
     return cutoff
 
-def graph_model(config, tree_model):
+def graph_model(config, tree_model, filename):
     """
     Draws the dot graph for a given model
     input:
@@ -523,8 +523,8 @@ def graph_model(config, tree_model):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Saving the plot to the specified directory
-    plt.savefig(f'models/plot_{timestamp}.png', dpi=600, bbox_inches='tight')
-    config.log.info(f'Model diagram saved here: models/plot_{timestamp}.png')
+    plt.savefig(f'models/plot_{timestamp}_{filename.rsplit('.', 1)[0]}.png', dpi=600, bbox_inches='tight')
+    config.log.info(f'Model diagram saved here: models/plot_{timestamp}_{filename.rsplit('.', 1)[0]}.png')
 
 def defined_all_models(n: int):
     """

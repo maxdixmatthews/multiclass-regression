@@ -73,7 +73,7 @@ class single_model(model):
         Y = train_df[self.name].astype(int)
         
         #Select model
-        if model_type == 'LogisticRegression':
+        if model_type.lower() == 'logisticregression':
             model = LogisticRegression(solver='lbfgs', max_iter=2000)
             # Find Cutoff using Youden's J statistic
             # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
@@ -132,7 +132,7 @@ class single_model(model):
         elif model_type.lower() == 'svm':
             model = svm.SVC(probability=True)
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
-        elif model_type.lower() == 'randomForest':
+        elif model_type.lower() == 'randomforest':
             model = RandomForestClassifier(n_estimators = 100)
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         else:
