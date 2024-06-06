@@ -521,10 +521,10 @@ def graph_model(config, tree_model, filename):
     plt.figtext(0.85, 0.95, f"The {tree_model.score_type} of this tree is {tree_model.score}", ha="center", fontsize=8, bbox=dict(boxstyle="round,pad=0.2", facecolor='lightblue', edgecolor='black'))
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
+    no_file_type_data = filename.rsplit('.', 1)[0]
     # Saving the plot to the specified directory
-    plt.savefig(f'models/plot_{timestamp}_{filename.rsplit('.', 1)[0]}.png', dpi=600, bbox_inches='tight')
-    config.log.info(f'Model diagram saved here: models/plot_{timestamp}_{filename.rsplit('.', 1)[0]}.png')
+    plt.savefig(f'models/plot_{timestamp}_{no_file_type_data}.png', dpi=600, bbox_inches='tight')
+    config.log.info(f'Model diagram saved here: models/plot_{timestamp}_{no_file_type_data}.png')
 
 def defined_all_models(n: int):
     """
