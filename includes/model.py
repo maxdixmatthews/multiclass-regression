@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod, abstractproperty
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, roc_curve, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, roc_curve, f1_score, roc_auc_score, confusion_matrix
 from sklearn.model_selection import cross_val_predict
 import xgboost as xgb
 from skopt import BayesSearchCV
@@ -47,6 +47,9 @@ class single_model(model):
         self.y_target = None
         self.cutoff = None
         self.model_type = None
+
+        self.confusion_matrix = None
+        self.incorrect_classified_dict = None
         if score_type == 'accuracy':
             self.score_type = 'accuracy'
         else:
@@ -214,37 +217,55 @@ class single_model(model):
         train_df = df.copy()
         train_df[self.name] = train_df[response_col].apply(lambda x: 0 if x in self.type_0 else (1 if x in self.type_1 else 'ROW_NOT_IN_REG') )
         train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
+       
         if self.fitted_model == None:
             raise Exception('Must train model on data before it can be tested.')
         # y_pred = self.fitted_model.predict(train_df.drop(['key',response_col, self.name], axis=1))
         # train_df['y_pred'] = y_pred
         # self.predicted_df = train_df[['key','y_pred']]
         if self.cutoff is not None:
-            y_pred = self.fitted_model.predict_proba(df.drop(['key',response_col], axis=1))[:, 1]
-            new_pred = np.where(y_pred > self.cutoff, 1, 0)
-            df['y_pred'] = new_pred
-            self.predicted_df = df[['key','y_pred']]
+            y_prob = self.fitted_model.predict_proba(train_df.drop(['key',response_col, self.name], axis=1))[:, 1]
+            self.y_pred = np.where(y_prob > self.cutoff, 1, 0)
+            train_df['y_pred'] = self.y_pred
+            self.predicted_df = train_df[['key','y_pred']]
+
         else:
-            y_pred = self.fitted_model.predict(df.drop(['key',response_col], axis=1))
-            df['y_pred'] = y_pred
-            self.predicted_df = df[['key','y_pred']]
-
-        y_prob = self.fitted_model.predict_proba(train_df.drop(['key',response_col, self.name], axis=1))[:, 1]
-        new_pred = np.where(y_prob > self.cutoff, 1, 0)
-        train_df['y_pred'] = new_pred
-        y_pred = new_pred
-        self.predicted_df = train_df[['key','y_pred']]
-
-        self.y_pred = y_pred
-        self.y_target = train_df[self.name].tolist()
+            self.y_pred = self.fitted_model.predict(train_df.drop(['key',response_col], self.name, axis=1))
+            train_df['y_pred'] = self.y_pred
+            self.predicted_df = train_df[['key','y_pred']]
         
+        # y_prob = self.fitted_model.predict_proba(train_df.drop(['key',response_col, self.name], axis=1))[:, 1]
+        # new_pred = np.where(y_prob > self.cutoff, 1, 0)
+        # train_df['y_pred'] = new_pred
+        # y_pred = new_pred
+        # self.predicted_df = train_df[['key','y_pred']]
+        # self.y_pred = y_pred
+
+        self.y_target = train_df[self.name].tolist()
+        self.confusion_matrix = confusion_matrix(self.y_target, self.y_pred.tolist(), normalize='true')
+
+        total_counts = train_df['Y'].value_counts().reset_index()
+        total_counts.columns = ['Y', 'total_count']
+        incorrect_cat = train_df.loc[train_df[self.name] != train_df["y_pred"]]
+
+        type_counts = incorrect_cat['Y'].value_counts().reset_index()
+        type_counts.columns = ['Y', 'incorrect_count']
+
+        merged_df = pd.merge(type_counts, total_counts, on='Y')
+        merged_df['proportion'] = merged_df['incorrect_count']/merged_df['total_count']
+        merged_df.index = merged_df['Y']
+        merged_df = merged_df.reindex(self.all_cat_tested, fill_value=0)
+        type_counts_dict = merged_df['proportion'].to_dict()
+        self.incorrect_classified_dict = type_counts_dict
+
+        # print(self.name)
+        # print(self.confusion_matrix)
         if self.score_type == 'accuracy' or 'ROC':
             self.score = accuracy_score(self.y_target,self.y_pred.tolist())
         elif self.score_type == 'ROC':
             self.score = roc_auc_score(self.y_target,self.y_pred.tolist())
         elif self.score_type == 'f1':
             self.score = f1_score(self.y_target,self.y_pred.tolist())
-
         return self.predicted_df
     
     def get_prediction(self):
