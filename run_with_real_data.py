@@ -38,6 +38,7 @@ def main(config):
     # df.columns = ['p0','p1','p2','p3','p4','p5','Y']
     # print(df)
     # df = df.head(1000)  
+    # using
     config = Config('new_100k_10_cat.csv')
     X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.2, stratify=df['Y'], random_state=42) 
     score_type = 'accuracy'

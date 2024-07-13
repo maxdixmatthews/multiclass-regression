@@ -58,7 +58,7 @@ def main():
     df = pd.read_csv(dataset)
     # df = df.head(100)
     df.drop(df.columns[0], axis=1, inplace=True)
-    X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.5, random_state=42)
     score_type = 'accuracy' 
     categories = tuple(df['Y'].unique())
 

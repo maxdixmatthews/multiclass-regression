@@ -608,9 +608,10 @@ def plot_roc_curve(y_true, y_probs):
 def sort_with_type_check(t):
         return sorted(t, key=lambda x: (str(type(x)), x))
     
-def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories):
+def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None):
     # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
-    built_mods = build_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
+    if not built_mods:
+        built_mods = build_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
     test_single_models(built_mods, X_test)
     built_mods = list(built_mods.values())
     config.log.info(f'Best models are {built_mods}')
