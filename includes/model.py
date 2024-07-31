@@ -115,21 +115,21 @@ class single_model(model):
                                 estimator = xgb_model,                                    
                                 search_spaces = search_spaces,                      
                                 scoring = 'roc_auc',                                  
-                                cv = StratifiedKFold(n_splits=5, shuffle=True),                                   
-                                n_iter = 15,                                      
+                                cv = StratifiedKFold(n_splits=3, shuffle=True),                                
+                                n_iter = 3,                                      
                                 n_points = 5,                                       
-                                n_jobs = 1,                                                                                
-                                verbose = 0,
+                                n_jobs = -1,                                                                                
+                                verbose = 1,
                                 random_state=42,
                                 refit=True
             )  
+            
             np.int = int
             _ = bayes_cv.fit(train_df.drop([response_col,self.name], axis=1), Y)
             model = xgb.XGBClassifier(
-                n_jobs = 5,
+                n_jobs = -1,
                 objective = 'binary:logistic',
                 eval_metric = 'auc', 
-                early_stopping_rounds = 5,
                 **bayes_cv.best_params_
             )
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
