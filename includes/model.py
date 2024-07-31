@@ -88,8 +88,10 @@ class single_model(model):
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
-
         elif model_type.lower() == 'xgboost':
+            model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'xgboosthyper':
             model = xgb.XGBClassifier(objective="binary:logistic")
             # Find Cutoff using Youden's J statistic
             
