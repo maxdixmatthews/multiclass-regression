@@ -15,6 +15,7 @@ import networkx as nx
 from networkx.drawing.nx_pydot import graphviz_layout
 from datetime import datetime 
 import os
+from sklearn.preprocessing import LabelEncoder
 
 def read_arff(file_path, columns = None):
     with open(file_path, 'r') as file:
@@ -381,7 +382,10 @@ def stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, mode
     top_model_type = None
     for mod_type in model_types:
         config.log.info(f'Finding stepwise layer for {mod_type} with categories: {categories}')
-        highest_model, best_score = stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
+        try:
+            highest_model, best_score = stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
+        except Exception as e:
+            config.log.info(f'Error in model search of {e}')
         config.log.info(f'Stepwise layer for {mod_type}: {highest_model} is {best_score}')
         if best_score > top_score:
             top_score = best_score
@@ -472,7 +476,7 @@ def find_cutoff(model, data_df, Y, type='ROC'):
         cutoff = thresholds[np.argmax(scores)]
     return cutoff
 
-def graph_model(config, tree_model, filename):
+def graph_model(config, tree_model, filename, transform_label = None):
     """
     Draws the dot graph for a given model
     input:
@@ -480,6 +484,10 @@ def graph_model(config, tree_model, filename):
     output:
         saves the image of a model to the /models folder
     """
+    if transform_label: 
+        for i in tree_model.models:
+            i.reset_labels(transform_label)
+
     config.log.info(f'Plotting tree: {tree_model}')
     max_width_px, max_height_px = 1920, 1080  # Adjust as needed
     dpi = 300  # High DPI for good quality
@@ -499,14 +507,14 @@ def graph_model(config, tree_model, filename):
             type_0_obj = [obj for obj in tree_model.models if sorted(obj.all_cat_tested) == sorted(type_0)][0]
             edges += [(str(i.name),str(type_0_obj.name))]
         else:
-            edges += [(str(i.name),str(type_0))]
+            edges += [(str(i.name),str(i.type_0_categories_name))]
         
         type_1 = i.type_1_categories
         if len(type_1) > 1:
             type_1_obj = [obj for obj in tree_model.models if sorted(obj.all_cat_tested) == sorted(type_1)][0]
             edges += [(str(i.name),str(type_1_obj.name))]
         else:
-            edges += [(str(i.name),str(type_1))]
+            edges += [(str(i.name),str(i.type_1_categories_name))]
     G.add_edges_from(edges)
 
     # Draw the graph
@@ -607,8 +615,15 @@ def plot_roc_curve(y_true, y_probs):
 
 def sort_with_type_check(t):
         return sorted(t, key=lambda x: (str(type(x)), x))
+
+def one_hot_encode(df, column):
+    #used code from stack overflow: https://stackoverflow.com/questions/37292872/how-can-i-one-hot-encode-in-python
+    dummies = pd.get_dummies(df[column], prefix=column)
+    df_encoded = pd.concat([df, dummies], axis=1)
+    df_encoded.drop(columns=[column], inplace=True)
+    return df_encoded
     
-def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None):
+def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None, transform_label = None):
     # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
     if not built_mods:
         built_mods = build_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
@@ -620,7 +635,33 @@ def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, bes
     tree_model.model_score(y_test.tolist())
     accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
     config.log.info(f'Accuracy is {accuracy}')
-    string_categories = [str(i) for i in categories]
+    if transform_label:
+        output['y_pred'] = transform_label.inverse_transform(output['y_pred'])
+        y_test = transform_label.inverse_transform(y_test)
+        string_categories = transform_label.classes_
+    else:
+        string_categories = [str(i) for i in categories]
     config.log.info(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=string_categories))
     print(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=string_categories))
     return tree_model
+
+def map_categorical_target(config, df):
+    """
+    If the target value 'Y' is categorical then will map this to numerical and return the mapping
+        input:
+        n: number of categories/classes
+    output:
+        the labelEconder if a transform was performed, None otherwise
+    """ 
+    pre_transform_categories = tuple(df['Y'].unique())
+    all_integers = all(isinstance(x, int) or str(x).isdigit() for x in pre_transform_categories)
+    if not all_integers:
+        transform_label = LabelEncoder()
+        config.log.info("Types are categorical so need to map them to integers.")
+        pre_transform_categories = tuple(df['Y'].unique())
+        df['Y'] = transform_label.fit_transform(df['Y'])
+        mapped_categories = dict(zip(pre_transform_categories, transform_label.transform(pre_transform_categories)))
+        config.log.info(f"mapped categories: {mapped_categories}")
+        return transform_label
+    else:
+        return None

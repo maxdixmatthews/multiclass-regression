@@ -38,6 +38,8 @@ class single_model(model):
         self.all_cat_tested = list(set(num_list_1 + num_list_2))
         self.type_0_categories = category_split[0]
         self.type_1_categories = category_split[1]
+        self.type_0_categories_name = category_split[0]
+        self.type_1_categories_name = category_split[1]
         self.type_0 = num_list_1
         self.type_1 = num_list_2
         self.fitted_model = None
@@ -90,48 +92,47 @@ class single_model(model):
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(objective="binary:logistic")
             # Find Cutoff using Youden's J statistic
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            
             # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
             # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
             # optimal_idx = np.argmax(tpr - fpr)
             # self.cutoff = thresholds[optimal_idx]
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
 
-            # model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
+            xgb_model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
             # model = KNeighborsClassifier(n_neighbors=5)
             # Will have to do hyperparameter tuning
             # Define search space
-            # search_spaces = {   
-            #     'learning_rate': Real(0.01, 1.0, 'log-uniform'),
-            #     'max_depth': Integer(2, 20),
-            #     'reg_lambda': Real(1e-9, 100., 'log-uniform'),
-            #     'reg_alpha': Real(1e-9, 100., 'log-uniform'),
-            #     'gamma': Real(1e-9, 0.5, 'log-uniform'),  
-            #     'n_estimators': Integer(10, 1000)
-            # }
-            # model = BayesSearchCV(
-            #                     estimator = xgb_model,                                    
-            #                     search_spaces = search_spaces,                      
-            #                     scoring = 'roc_auc',                                  
-            #                     cv = StratifiedKFold(n_splits=5, shuffle=True),                                   
-            #                     n_iter = 20,                                      
-            #                     n_points = 5,                                       
-            #                     n_jobs = 1,                                                                                
-            #                     verbose = 0,
-            #                     random_state=42,
-            #                     refit=True
-            # )  
+            search_spaces = {   
+                'learning_rate': Real(0.01, 1.0, 'log-uniform'),
+                'max_depth': Integer(2, 20),
+                'reg_lambda': Real(1e-9, 100., 'log-uniform'),
+                'reg_alpha': Real(1e-9, 100., 'log-uniform'),
+                'gamma': Real(1e-9, 0.5, 'log-uniform'),  
+                'n_estimators': Integer(10, 1000)
+            }
+            bayes_cv = BayesSearchCV(
+                                estimator = xgb_model,                                    
+                                search_spaces = search_spaces,                      
+                                scoring = 'roc_auc',                                  
+                                cv = StratifiedKFold(n_splits=5, shuffle=True),                                   
+                                n_iter = 15,                                      
+                                n_points = 5,                                       
+                                n_jobs = 1,                                                                                
+                                verbose = 0,
+                                random_state=42,
+                                refit=True
+            )  
             np.int = int
-            # _ = bayes_cv.fit(train_df.drop([response_col,self.name], axis=1), Y)
-            # model = xgb.XGBClassifier(
-            #     n_jobs = 5,
-            #     objective = 'binary:logistic',
-            #     eval_metric = 'auc', 
-            #     booster = 'gbtree',
-            #     enable_categorical = True, 
-            #     early_stopping_rounds = 5,
-            #     **bayes_cv.best_params_
-            # )
+            _ = bayes_cv.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            model = xgb.XGBClassifier(
+                n_jobs = 5,
+                objective = 'binary:logistic',
+                eval_metric = 'auc', 
+                early_stopping_rounds = 5,
+                **bayes_cv.best_params_
+            )
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'svm':
             model = svm.SVC(probability=True)
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
@@ -195,11 +196,11 @@ class single_model(model):
             raise Exception ('Must run predict on a model before scoring it.')
         else:
             if self.score_type == 'accuracy' or 'ROC':
-                self.score = round(accuracy_score(self.y_target,self.y_pred.tolist()), 3)
+                self.score = round(accuracy_score(self.y_target,self.y_pred.tolist()), 8)
             elif self.score_type == 'ROC':
-                self.score = round(roc_auc_score(self.y_target,self.y_pred.tolist()), 3)
+                self.score = round(roc_auc_score(self.y_target,self.y_pred.tolist()), 8)
             elif self.score_type == 'f1':
-                self.score = round(f1_score(self.y_target,self.y_pred.tolist()), 3)
+                self.score = round(f1_score(self.y_target,self.y_pred.tolist()), 8)
             return self.score
         
     def predict_individual(self, df_original: pd.DataFrame):
@@ -270,6 +271,12 @@ class single_model(model):
     
     def get_prediction(self):
         return self.predicted_df
+    
+    def reset_labels(self, transform_label):
+        # self.all_cat_tested = list(set(num_list_1 + num_list_2))
+        self.name = str(transform_label.inverse_transform((self.category_split[0]))) + '_' + str(transform_label.inverse_transform((self.category_split[1])))
+        self.type_0_categories_name = transform_label.inverse_transform(self.type_0_categories_name)
+        self.type_1_categories_name = transform_label.inverse_transform(self.type_1_categories_name)
 
 class tree_model(model):
     # name of model needs to be recognizable or some combination of the submodels
@@ -308,7 +315,7 @@ class tree_model(model):
         for model in self.models:
             df_pred = df.copy()
             y_pred = model.predict(df_pred)
-            predicted_dfs.update({model:y_pred}) 
+            predicted_dfs.update({model:y_pred})
 
         df_key['total_pred'] = None
 
@@ -316,7 +323,7 @@ class tree_model(model):
         #     df_key.loc[df_key['key'] == row['key']] = 'max_' + str(row['key'])
         # print(df_key)
         # for model in self.models:
-        #     predicted_dfs[model_check].loc[ predicted_dfs[model_check]['key'] == [row['key']]]
+        #     predicted_dfs[model_check].loc[predicted_dfs[model_check]['key'] == [row['key']]]
         list_pred = list()
         for index, row in df_key.iterrows():
             model_check = self.models[0]

@@ -41,8 +41,8 @@ def main(filename, model_types):
     df = pd.read_csv(dataset)
     df.drop(df.columns[0], axis=1, inplace=True)
     X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42)
-    score_type = 'accuracy'
-    # categories = tuple((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))  
+    score_type = 'accuracy' 
+    transform_label = mf.map_categorical_target(config, df)
     categories = tuple(df['Y'].unique())
 
     config.log.info('Beginning of stepwise tree finder.')
@@ -50,8 +50,8 @@ def main(filename, model_types):
     config.log.info('Finished stepwise tree finder.')
     model_strucs = list(best_tree.keys())
     tree_types = list(best_tree.values())
-    best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories)
-    mf.graph_model(config, best_trained_model, filename)
+    best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories, transform_label=transform_label)
+    mf.graph_model(config, best_trained_model, filename, transform_label=transform_label)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
