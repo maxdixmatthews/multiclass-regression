@@ -38,7 +38,8 @@ def main(filename, model_types):
     dataset = filename
     config = Config(dataset)
     config.log.info(f'Beginning of {dataset}.')
-    df = pd.read_csv(dataset)
+    dataset_location = "data/" + dataset
+    df = pd.read_csv(dataset_location)
     df.drop(df.columns[0], axis=1, inplace=True)
     transform_label = mf.map_categorical_target(config, df)
     X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42)
