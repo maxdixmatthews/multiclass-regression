@@ -476,7 +476,7 @@ def find_cutoff(model, data_df, Y, type='ROC'):
         cutoff = thresholds[np.argmax(scores)]
     return cutoff
 
-def graph_model(config, tree_model, filename, transform_label = None):
+def graph_model(config, tree_model, filename, transform_label = None, model_types = None):
     """
     Draws the dot graph for a given model
     input:
@@ -531,8 +531,13 @@ def graph_model(config, tree_model, filename, transform_label = None):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     no_file_type_data = filename.rsplit('.', 1)[0]
     # Saving the plot to the specified directory
-    plt.savefig(f'models/plot_{timestamp}_{no_file_type_data}.png', dpi=600, bbox_inches='tight')
-    config.log.info(f'Model diagram saved here: models/plot_{timestamp}_{no_file_type_data}.png')
+    if model_types is not None:
+
+        save_file_name = f'plot_{timestamp}_{no_file_type_data}_{"_".join(model_types)}.png'
+    else:
+        save_file_name = f'plot_{timestamp}_{no_file_type_data}.png'
+    plt.savefig(f'models/{save_file_name}', dpi=600, bbox_inches='tight')
+    config.log.info(f'Model diagram saved here: models/{save_file_name}')
 
 def defined_all_models(n: int):
     """
