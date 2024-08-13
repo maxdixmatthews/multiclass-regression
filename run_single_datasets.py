@@ -51,7 +51,7 @@ def main(filename, model_types):
     config.log.info('Beginning of stepwise tree finder.')
     best_tree = mf.stepwise_tree_finder(config, categories, X_train, X_test, {}, model_types=model_types, score_type=score_type)
     config.log.info('Finished stepwise tree finder.')
-    print(f"Took: {round(time.perf_counter()-start,3)} to do find best tree.")
+    config.log.info(f"Took: {round(time.perf_counter()-start,3)} to do find best tree.")
     model_strucs = list(best_tree.keys())
     tree_types = list(best_tree.values())
     config.log.info(model_strucs)
