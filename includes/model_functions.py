@@ -394,8 +394,8 @@ def stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, mode
             
     config.log.info(f'Stepwise layer found best split: {top_model} with mod type {top_model_type}')
     total_tree[top_model] = top_model_type
-    total1 = stepwise_tree_finder(config, tuple(top_model[0]), X1_train, X1_test, total_tree, model_types=model_types, score_type=score_type)
-    total2 = stepwise_tree_finder(config, tuple(top_model[1]), X1_train, X1_test, total1, model_types=model_types, score_type=score_type)
+    total1 = stepwise_tree_finder(config, tuple(top_model[0]), pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total_tree, model_types=model_types, score_type=score_type)
+    total2 = stepwise_tree_finder(config, tuple(top_model[1]),  pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total1, model_types=model_types, score_type=score_type)
     
     return total2
 

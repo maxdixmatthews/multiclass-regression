@@ -35,6 +35,8 @@ def main(filename, model_types):
     print(filename)
     if len(filename) <= 1:
         raise Exception(f"Improper filename of: {filename}")
+    start = time.perf_counter()
+   
     dataset = filename
     config = Config(dataset)
     config.log.info(f'Beginning of {dataset}.')
@@ -49,8 +51,11 @@ def main(filename, model_types):
     config.log.info('Beginning of stepwise tree finder.')
     best_tree = mf.stepwise_tree_finder(config, categories, X_train, X_test, {}, model_types=model_types, score_type=score_type)
     config.log.info('Finished stepwise tree finder.')
+    print(f"Took: {round(time.perf_counter()-start,3)} to do find best tree.")
     model_strucs = list(best_tree.keys())
     tree_types = list(best_tree.values())
+    config.log.info(model_strucs)
+    config.log.info(tree_types)
     best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories, transform_label=transform_label)
     mf.graph_model(config, best_trained_model, filename, transform_label=transform_label)
 
