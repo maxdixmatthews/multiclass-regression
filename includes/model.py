@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod, abstractproperty
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LassoCV, RidgeCV
 from sklearn.metrics import accuracy_score, roc_curve, f1_score, roc_auc_score, confusion_matrix
 from sklearn.model_selection import cross_val_predict
 import xgboost as xgb
@@ -12,6 +12,9 @@ import numpy as np
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
 import includes.model_functions as mf
+from sklearn.pipeline import make_pipeline, Pipeline
+from sklearn.feature_selection import SelectFromModel
+from sklearn.preprocessing import StandardScaler
 
 class model(ABC):
     def __init__(self, model_name):
@@ -88,6 +91,18 @@ class single_model(model):
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
+        elif model_type.lower() == 'logisticregressionlasso':
+            model = make_pipeline(
+                StandardScaler(), 
+                SelectFromModel(LassoCV(cv=5)), 
+                LogisticRegression(solver='lbfgs', max_iter=2000))
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'logisticregressionridge':
+            model = make_pipeline(
+                StandardScaler(), 
+                SelectFromModel(RidgeCV(cv=5)), 
+                LogisticRegression(solver='lbfgs', max_iter=2000))
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
@@ -136,7 +151,8 @@ class single_model(model):
             )
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'svm':
-            model = svm.SVC(probability=True)
+            model = make_pipeline(StandardScaler(), svm.SVC(probability=True))
+            # model = svm.SVC(probability=True)
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'randomforest':
             model = RandomForestClassifier(n_estimators = 100)
