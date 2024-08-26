@@ -15,6 +15,7 @@ import includes.model_functions as mf
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
 
 class model(ABC):
     def __init__(self, model_name):
@@ -89,23 +90,23 @@ class single_model(model):
             # optimal_idx = np.argmax(tpr - fpr)
             # self.cutoff = thresholds[optimal_idx]
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
         elif model_type.lower() == 'logisticregressionlasso':
             model = make_pipeline(
                 StandardScaler(), 
-                SelectFromModel(LassoCV(cv=5)), 
+                SelectFromModel(LassoCV(cv=3)), 
                 LogisticRegression(solver='lbfgs', max_iter=2000))
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'logisticregressionridge':
             model = make_pipeline(
                 StandardScaler(), 
-                SelectFromModel(RidgeCV(cv=5)), 
+                SelectFromModel(RidgeCV(cv=3)), 
                 LogisticRegression(solver='lbfgs', max_iter=2000))
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'xgboosthyper':
             model = xgb.XGBClassifier(objective="binary:logistic")
             # Find Cutoff using Youden's J statistic
@@ -149,22 +150,18 @@ class single_model(model):
                 eval_metric = 'auc', 
                 **bayes_cv.best_params_
             )
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'svm':
             model = make_pipeline(StandardScaler(), svm.SVC(probability=True))
             # model = svm.SVC(probability=True)
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'randomforest':
             model = RandomForestClassifier(n_estimators=100)
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'knn':
-            # param_grid = {'n_neighbors': [1,10]}
+            param_grid = {'n_neighbors': [1,10]}
             # Set up GridSearchCV
             # model = KNeighborsClassifier()
-            model = KNeighborsClassifier(n_neighbors=10)
-            # model = GridSearchCV(knn, param_grid, cv=3, scoring='accuracy')
-        elif model_type.lower() == 'knnhyper':
-            param_grid = {'n_neighbors': range(1, 31)}
             knn = KNeighborsClassifier()
             model = GridSearchCV(knn, param_grid, cv=3, scoring='accuracy')
         else:
@@ -179,9 +176,14 @@ class single_model(model):
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
 
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             # XGBoost, Neural Network, Stukel model, anyother will work 
             # beat multinomial regression 
+        try:
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        except Exception as e:
+            print(f'Failed to find cutoff due to {e}')
+            self.cutoff = None
         model.fit(train_df.drop([response_col,self.name], axis=1), Y)
         self.fitted_model = model
 
@@ -259,7 +261,7 @@ class single_model(model):
             self.predicted_df = train_df[['key','y_pred']]
 
         else:
-            self.y_pred = self.fitted_model.predict(train_df.drop(['key',response_col], self.name, axis=1))
+            self.y_pred = self.fitted_model.predict(train_df.drop(['key',response_col, self.name], axis=1))
             train_df['y_pred'] = self.y_pred
             self.predicted_df = train_df[['key','y_pred']]
         
