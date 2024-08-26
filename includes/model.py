@@ -159,9 +159,12 @@ class single_model(model):
             model = RandomForestClassifier(n_estimators=100)
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'knn':
-            param_grid = {'n_neighbors': [1,10]}
+            # model = KNeighborsClassifier()
+            model = KNeighborsClassifier(n_neighbors=10)
+        elif model_type.lower() == 'knnhyper':
             # Set up GridSearchCV
             # model = KNeighborsClassifier()
+            param_grid = {'n_neighbors': range(1,31)}
             knn = KNeighborsClassifier()
             model = GridSearchCV(knn, param_grid, cv=3, scoring='accuracy')
         else:
