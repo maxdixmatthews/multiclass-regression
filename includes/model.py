@@ -155,8 +155,18 @@ class single_model(model):
             # model = svm.SVC(probability=True)
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'randomforest':
-            model = RandomForestClassifier(n_estimators = 100)
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            model = RandomForestClassifier(n_estimators=100)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'knn':
+            # param_grid = {'n_neighbors': [1,10]}
+            # Set up GridSearchCV
+            # model = KNeighborsClassifier()
+            model = KNeighborsClassifier(n_neighbors=10)
+            # model = GridSearchCV(knn, param_grid, cv=3, scoring='accuracy')
+        elif model_type.lower() == 'knnhyper':
+            param_grid = {'n_neighbors': range(1, 31)}
+            knn = KNeighborsClassifier()
+            model = GridSearchCV(knn, param_grid, cv=3, scoring='accuracy')
         else:
             print(f"nothing found for {model_type.lower()}")
             model = LogisticRegression(solver='sag', max_iter=2000)
