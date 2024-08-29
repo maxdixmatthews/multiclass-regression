@@ -80,6 +80,7 @@ class single_model(model):
         train_df[self.name] = train_df[response_col].apply(lambda x: 0 if x in self.type_0 else (1 if x in self.type_1 else 'ROW_NOT_IN_REG') )
         train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
         Y = train_df[self.name].astype(int)
+        skip_cutoff = False
         
         #Select model
         if model_type.lower() == 'logisticregression':
@@ -161,12 +162,14 @@ class single_model(model):
         elif model_type.lower() == 'knn':
             # model = KNeighborsClassifier()
             model = KNeighborsClassifier(n_neighbors=10)
+            skip_cutoff = True
         elif model_type.lower() == 'knnhyper':
             # Set up GridSearchCV
             # model = KNeighborsClassifier()
             param_grid = {'n_neighbors': range(1,31)}
             knn = KNeighborsClassifier()
             model = GridSearchCV(knn, param_grid, cv=3, scoring='accuracy')
+            skip_cutoff = True
         else:
             print(f"nothing found for {model_type.lower()}")
             model = LogisticRegression(solver='sag', max_iter=2000)
@@ -183,7 +186,7 @@ class single_model(model):
             # XGBoost, Neural Network, Stukel model, anyother will work 
             # beat multinomial regression 
         try:
-            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type, skip_cutoff=skip_cutoff)
         except Exception as e:
             print(f'Failed to find cutoff due to {e}')
             self.cutoff = None

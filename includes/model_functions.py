@@ -586,7 +586,7 @@ def to_labels(probs: np.ndarray, threshold: float) -> np.ndarray:
     """Convert probabilities to binary labels based on the given threshold."""
     return (probs >= threshold).astype(int)
     
-def find_cutoff(model, data_df, Y, type='ROC'):
+def find_cutoff(model, data_df, Y, type='ROC', skip_cutoff=False):
     """
     Find the cutoff point for a given model
     input:
@@ -597,6 +597,8 @@ def find_cutoff(model, data_df, Y, type='ROC'):
     output:
         list of binary comparisons
     """
+    if skip_cutoff:
+        return None
     predict_probabilities = cross_val_predict(model, data_df, Y, method='predict_proba')[:, 1]
 
     if type == 'ROC' or type == 'accuracy':
