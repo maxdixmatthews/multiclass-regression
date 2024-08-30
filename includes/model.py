@@ -84,7 +84,7 @@ class single_model(model):
         
         #Select model
         if model_type.lower() == 'logisticregression':
-            model = LogisticRegression(solver='lbfgs', max_iter=2000)
+            model = LogisticRegression(solver='lbfgs', max_iter=2000, n_jobs=-1)
             # Find Cutoff using Youden's J statistic
             # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
             # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
@@ -97,13 +97,13 @@ class single_model(model):
             model = make_pipeline(
                 StandardScaler(), 
                 SelectFromModel(LassoCV(cv=3)), 
-                LogisticRegression(solver='lbfgs', max_iter=2000))
+                LogisticRegression(solver='lbfgs', max_iter=2000, n_jobs=-1))
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'logisticregressionridge':
             model = make_pipeline(
                 StandardScaler(), 
                 SelectFromModel(RidgeCV(cv=3)), 
-                LogisticRegression(solver='lbfgs', max_iter=2000))
+                LogisticRegression(solver='lbfgs', max_iter=2000, n_jobs=-1))
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
@@ -157,22 +157,22 @@ class single_model(model):
             # model = svm.SVC(probability=True)
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'randomforest':
-            model = RandomForestClassifier(n_estimators=100)
+            model = RandomForestClassifier(n_estimators=100, n_jobs=-1)
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'knn':
             # model = KNeighborsClassifier()
-            model = KNeighborsClassifier(n_neighbors=10)
+            model = KNeighborsClassifier(n_neighbors=10, n_jobs=-1)
             skip_cutoff = True
         elif model_type.lower() == 'knnhyper':
             # Set up GridSearchCV
             # model = KNeighborsClassifier()
             param_grid = {'n_neighbors': range(1,31)}
-            knn = KNeighborsClassifier()
+            knn = KNeighborsClassifier(n_jobs=-1)
             model = GridSearchCV(knn, param_grid, cv=3, scoring='accuracy')
             skip_cutoff = True
         else:
             print(f"nothing found for {model_type.lower()}")
-            model = LogisticRegression(solver='sag', max_iter=2000)
+            model = LogisticRegression(solver='sag', max_iter=2000, n_jobs=-1)
 
             # Find Cutoff using Youden's J statistic
             # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]

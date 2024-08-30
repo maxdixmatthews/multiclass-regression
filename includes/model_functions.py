@@ -102,7 +102,7 @@ def thread_build_single_models(config, models_list: list, train_data, score_type
     # Update trained_model_lists with the results from parallel execution
     for model_tuple, trained_model in results:
         trained_model_lists[model_tuple] = trained_model
-        config.log.debug(f'Finished training model {model_tuple}')
+        # config.log.debug(f'Finished training model {model_tuple}')
     return trained_model_lists
 
 def build_single_models(config, models_list: list, train_data, score_type='accuracy', train_type='LogisticRegression') -> list:
@@ -309,7 +309,36 @@ def stepwise_exclusion(config, left_list, right_list, X_train, X_test, train_typ
     best_mod_ordered = (sorted_d_desc[0][0][1], sorted_d_desc[0][0][0])
     best_score = sorted_d_desc[0][1]
     return best_mod_ordered, best_score
+
+def thread_stepwise_inclusion(config, left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'): 
+    # Returns best_model and best_score as tuple (best_model, best_score)
+    model_list = []
+    for i in right_list:
+        all_but_one = tuple(x for x in right_list if x != i)
+        model_def = [tuple(tuple(left_list) + (i,)), all_but_one]
+        model_list.append(model_def)
+    model = thread_build_single_models(config, model_list, X_train, score_type=score_type, train_type=train_type)
+    tested_mods = test_single_models(model,X_test)
+    sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
+    best_mod = sorted_d_desc[0][0]
+    best_score = sorted_d_desc[0][1]
+    return best_mod, best_score
     
+def thread_stepwise_exclusion(config, left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'):
+    # Returns best_model and best_score as tuple (best_model, best_score)
+    model_list = []
+    for i in left_list:
+        all_but_one = tuple(x for x in left_list if x != i)
+        model_def = [tuple(tuple(right_list) + (i,)), all_but_one]
+        model_list.append(model_def)
+    model = thread_build_single_models(config, model_list, X_train, score_type=score_type, train_type=train_type)
+    tested_mods = test_single_models(model, X_test)
+    sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
+    best_mod_ordered = (sorted_d_desc[0][0][1], sorted_d_desc[0][0][0])
+    best_score = sorted_d_desc[0][1]
+    return best_mod_ordered, best_score
+
+
 def stepwise_single_layer(categories, X_train, X_test, model_type='LogisticRegression'):
     best_mod, best_score = stepwise_inclusion([], categories, X_train, X_test)
     while True:
@@ -386,7 +415,7 @@ def stepwise_layer_finder(config, categories, X_train, X_test, model_type='Logis
     return best_mod, best_score
 
 def thread_stepwise_layer_finder(config, categories, X_train, X_test, model_type='LogisticRegression', score_type='accuracy'):
-    best_mod, best_score = new_mod, new_score = stepwise_inclusion(config, [], categories, X_train, X_test, train_type=model_type)
+    best_mod, best_score = new_mod, new_score = thread_stepwise_inclusion(config, [], categories, X_train, X_test, train_type=model_type)
     failed_model_counter = 0
     run_inclusion = True
  
@@ -401,7 +430,7 @@ def thread_stepwise_layer_finder(config, categories, X_train, X_test, model_type
             run_score = new_score       
 
         if run_inclusion:
-            new_mod, new_score = stepwise_inclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
+            new_mod, new_score = thread_stepwise_inclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
             if new_score > best_score:
                 best_mod = new_mod
                 best_score = new_score
@@ -414,7 +443,7 @@ def thread_stepwise_layer_finder(config, categories, X_train, X_test, model_type
                     run_inclusion = True
                 failed_model_counter += 1
         else:
-            new_mod, new_score = stepwise_exclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
+            new_mod, new_score = thread_stepwise_exclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
             if new_score > best_score:
                 best_mod = new_mod
                 best_score = new_score      
@@ -425,7 +454,7 @@ def thread_stepwise_layer_finder(config, categories, X_train, X_test, model_type
             else:
                 run_inclusion = True
                 failed_model_counter += 1
-    return best_mod, best_score, model_type
+    return best_mod, best_score
 
 def thread_stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, model_types=['LogisticRegression'], score_type='accuracy'):
     """
@@ -447,7 +476,7 @@ def thread_stepwise_tree_finder(config, categories, X1_train, X1_test, total_tre
             top_score = 0
             top_model = 0
             for mod_type in model_types:
-                new_mod = build_single_models(config, [two_cat_mod], X_train, score_type=score_type, train_type=mod_type)
+                new_mod = thread_build_single_models(config, [two_cat_mod], X_train, score_type=score_type, train_type=mod_type)
                 tested_mods = test_single_models(new_mod, X_test)
                 sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
                 score = sorted_d_desc[0][1]
@@ -463,33 +492,33 @@ def thread_stepwise_tree_finder(config, categories, X1_train, X1_test, total_tre
     top_score = 0
     top_model = None
     top_model_type = None
-    with multiprocessing.Pool() as pool:
-        # Use pool.starmap to pass multiple arguments to the training function
-        # highest_model, best_score = stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
-        results = pool.starmap(thread_stepwise_layer_finder, 
-                            [(config, categories, X_train, X_test, mod_type, score_type) for mod_type in model_types])
+    # with multiprocessing.Pool() as pool:
+    #     # Use pool.starmap to pass multiple arguments to the training function
+    #     # highest_model, best_score = stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
+    #     results = pool.starmap(thread_stepwise_layer_finder, 
+    #                         [(config, categories, X_train, X_test, mod_type, score_type) for mod_type in model_types])
     
-    top_model = max(results, key=lambda x: x[1])
+    # top_model = max(results, key=lambda x: x[1])
 
-    # for mod_type in model_types:
-    #     config.log.info(f'Finding stepwise layer for {mod_type} with categories: {categories}')
-    #     try:
-    #         highest_model, best_score = stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
-    #     except Exception as e:
-    #         config.log.info(f'Error in model search of {e}')
-    #     config.log.info(f'Stepwise layer for {mod_type}: {highest_model} is {best_score}')
-    #     if best_score > top_score:
-    #         top_score = best_score
-    #         top_model = highest_model
-    #         top_model_type = mod_type
-    # top_model = tuple((top_model, top_model, top_model_type))
-    
+    top_score = 0
+    top_model = None
+    top_model_type = None
+    for mod_type in model_types:
+        config.log.info(f'Finding stepwise layer for {mod_type} with categories: {categories}')
+        try:
+            highest_model, best_score = thread_stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
+        except Exception as e:
+            config.log.info(f'Error in model search of {e}')
+        config.log.info(f'Stepwise layer for {mod_type}: {highest_model} is {best_score}')
+        if best_score > top_score:
+            top_score = best_score
+            top_model = highest_model
+            top_model_type = mod_type
             
-    config.log.info(f'Stepwise layer found best split: {top_model[0]} with mod type {top_model[2]}')
-    total_tree[top_model[0]] = top_model[2]
-    total1 = thread_stepwise_tree_finder(config, tuple(top_model[0][0]), pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total_tree, model_types=model_types, score_type=score_type)
-    total2 = thread_stepwise_tree_finder(config, tuple(top_model[0][1]),  pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total1, model_types=model_types, score_type=score_type)
-
+    config.log.info(f'Stepwise layer found best split: {top_model} with mod type {top_model_type}')
+    total_tree[top_model] = top_model_type
+    total1 = thread_stepwise_tree_finder(config, tuple(top_model[0]), pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total_tree, model_types=model_types, score_type=score_type)
+    total2 = thread_stepwise_tree_finder(config, tuple(top_model[1]),  pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total1, model_types=model_types, score_type=score_type)
     # total1 = stepwise_tree_finder(config, tuple(top_model[0][0]), pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total_tree, model_types=model_types, score_type=score_type)
     # total2 = stepwise_tree_finder(config, tuple(top_model[0][1]),  pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total1, model_types=model_types, score_type=score_type)
     return total2
