@@ -338,7 +338,6 @@ def thread_stepwise_exclusion(config, left_list, right_list, X_train, X_test, tr
     best_score = sorted_d_desc[0][1]
     return best_mod_ordered, best_score
 
-
 def stepwise_single_layer(categories, X_train, X_test, model_type='LogisticRegression'):
     best_mod, best_score = stepwise_inclusion([], categories, X_train, X_test)
     while True:
@@ -489,9 +488,6 @@ def thread_stepwise_tree_finder(config, categories, X1_train, X1_test, total_tre
         else:
             return total_tree
     
-    top_score = 0
-    top_model = None
-    top_model_type = None
     # with multiprocessing.Pool() as pool:
     #     # Use pool.starmap to pass multiple arguments to the training function
     #     # highest_model, best_score = stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
@@ -514,11 +510,11 @@ def thread_stepwise_tree_finder(config, categories, X1_train, X1_test, total_tre
             top_score = best_score
             top_model = highest_model
             top_model_type = mod_type
-            
+
     config.log.info(f'Stepwise layer found best split: {top_model} with mod type {top_model_type}')
     total_tree[top_model] = top_model_type
-    total1 = thread_stepwise_tree_finder(config, tuple(top_model[0]), pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total_tree, model_types=model_types, score_type=score_type)
-    total2 = thread_stepwise_tree_finder(config, tuple(top_model[1]),  pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total1, model_types=model_types, score_type=score_type)
+    total1 = thread_stepwise_tree_finder(config, tuple(top_model[0]), X1_train, X1_test, total_tree, model_types=model_types, score_type=score_type)
+    total2 = thread_stepwise_tree_finder(config, tuple(top_model[1]), X1_train, X1_test, total1, model_types=model_types, score_type=score_type)
     # total1 = stepwise_tree_finder(config, tuple(top_model[0][0]), pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total_tree, model_types=model_types, score_type=score_type)
     # total2 = stepwise_tree_finder(config, tuple(top_model[0][1]),  pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total1, model_types=model_types, score_type=score_type)
     return total2
@@ -529,7 +525,7 @@ def stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, mode
     input:
         config: config object
         categories: a tuple of the lists 
-        all_model_struc: a list of all models
+        all_model_struc: a list of all models 
         X1_train: the x train data
         X1_test: the x test data
         total_tree: a list pf the biggest models
@@ -552,7 +548,6 @@ def stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, mode
                     top_model_type = mod_type
             total_tree[two_cat_mod] = top_model_type
             config.log.info(f'Stepwise layer found best split: {two_cat_mod} with mod type {top_model_type}')
-
             return total_tree
         else:
             return total_tree
@@ -574,8 +569,8 @@ def stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, mode
             
     config.log.info(f'Stepwise layer found best split: {top_model} with mod type {top_model_type}')
     total_tree[top_model] = top_model_type
-    total1 = stepwise_tree_finder(config, tuple(top_model[0]), pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total_tree, model_types=model_types, score_type=score_type)
-    total2 = stepwise_tree_finder(config, tuple(top_model[1]),  pd.concat([X1_train, X1_test], ignore_index=True), X1_test, total1, model_types=model_types, score_type=score_type)
+    total1 = stepwise_tree_finder(config, tuple(top_model[0]), X1_train, X1_test, total_tree, model_types=model_types, score_type=score_type)
+    total2 = stepwise_tree_finder(config, tuple(top_model[1]),  X1_train, X1_test, total1, model_types=model_types, score_type=score_type)
     
     return total2
 
@@ -850,5 +845,27 @@ def map_categorical_target(config, df):
         mapped_categories = dict(zip(pre_transform_categories, transform_label.transform(pre_transform_categories)))
         config.log.info(f"mapped categories: {mapped_categories}")
         return transform_label
+    else:
+        return None
+    
+def all_trees_map_categorical_target(config, df):
+    """
+    If the target value 'Y' is categorical then will map this to numerical and return the mapping
+        input:
+        n: number of categories/classes
+    output:
+        the labelEconder if a transform was performed, None otherwise
+    """ 
+    pre_transform_categories = tuple(df['Y'].unique())
+    all_integers = all(isinstance(x, int) or str(x).isdigit() for x in pre_transform_categories)
+    if not all_integers:
+        transform_label = LabelEncoder()
+        config.log.info("Types are categorical so need to map them to integers.")
+        pre_transform_categories = tuple(df['Y'].unique())
+        df['Y'] = transform_label.fit_transform(df['Y']) + 1
+        mapped_categories = dict(zip(pre_transform_categories, transform_label.transform(pre_transform_categories)))
+        config.log.info(f"mapped categories: {mapped_categories}")
+        config.log.info(f"due to running all trees have moved the transform up 1 and can no longer map back.")
+        return None
     else:
         return None
