@@ -97,16 +97,18 @@ class single_model(model):
             model = make_pipeline(
                 StandardScaler(), 
                 SelectFromModel(LassoCV(cv=3)), 
-                LogisticRegression(solver='lbfgs', max_iter=2000))
+                LogisticRegression(solver='lbfgs', max_iter=2000, C=0.1))
+            # skip_cutoff = True
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'logisticregressionridge':
             model = make_pipeline(
                 StandardScaler(), 
                 SelectFromModel(RidgeCV(cv=3)), 
                 LogisticRegression(solver='lbfgs', max_iter=2000))
+            
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'xgboost':
-            model = xgb.XGBClassifier(objective="binary:logistic", eval_metric = 'auc')
+            model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'xgboosthyper':
             model = xgb.XGBClassifier(objective="binary:logistic")
