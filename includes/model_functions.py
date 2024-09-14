@@ -310,6 +310,32 @@ def stepwise_exclusion(config, left_list, right_list, X_train, X_test, train_typ
     best_score = sorted_d_desc[0][1]
     return best_mod_ordered, best_score
 
+def kfold_stepwise_inclusion(config, left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'): 
+    # Returns best_model and best_score as tuple (best_model, best_score)
+    model_list = []
+    for i in right_list:
+        all_but_one = tuple(x for x in right_list if x != i)
+        model_def = [tuple(tuple(left_list) + (i,)), all_but_one]
+        model_list.append(model_def)
+    model = kfold_build_single_models(config, model_list, X_train, score_type=score_type, train_type=train_type)
+    sorted_d_desc = sorted(model.items(), key=lambda item: item[1], reverse=True)
+    best_mod = sorted_d_desc[0][0]
+    best_score = sorted_d_desc[0][1]
+    return best_mod, best_score
+    
+def kfold_stepwise_exclusion(config, left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'):
+    # Returns best_model and best_score as tuple (best_model, best_score)
+    model_list = []
+    for i in left_list:
+        all_but_one = tuple(x for x in left_list if x != i)
+        model_def = [tuple(tuple(right_list) + (i,)), all_but_one]
+        model_list.append(model_def)
+    model = kfold_build_single_models(config, model_list, X_train, score_type=score_type, train_type=train_type)
+    sorted_d_desc = sorted(model.items(), key=lambda item: item[1], reverse=True)
+    best_mod_ordered = (sorted_d_desc[0][0][1], sorted_d_desc[0][0][0])
+    best_score = sorted_d_desc[0][1]
+    return best_mod_ordered, best_score
+
 def thread_stepwise_inclusion(config, left_list, right_list, X_train, X_test, train_type='LogisticRegression', score_type='accuracy'): 
     # Returns best_model and best_score as tuple (best_model, best_score)
     model_list = []
@@ -401,6 +427,48 @@ def stepwise_layer_finder(config, categories, X_train, X_test, model_type='Logis
                 failed_model_counter += 1
         else:
             new_mod, new_score = stepwise_exclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
+            if new_score > best_score:
+                best_mod = new_mod
+                best_score = new_score      
+                run_inclusion = True
+                failed_model_counter = 0
+                if len(new_mod[0]) > 1:
+                    run_inclusion = False
+            else:
+                run_inclusion = True
+                failed_model_counter += 1
+    return best_mod, best_score
+
+def kfold_stepwise_layer_finder(config, categories, X_train, X_test, model_type='LogisticRegression', score_type='accuracy'):
+    best_mod, best_score = new_mod, new_score = kfold_stepwise_inclusion(config, [], categories, X_train, X_test, train_type=model_type)
+    failed_model_counter = 0
+    run_inclusion = True
+ 
+    while True:
+        if failed_model_counter > 3:
+            break
+        elif failed_model_counter == 0:
+            best_mod = run_mod = new_mod
+            best_score = run_score = new_score
+        else:
+            run_mod = new_mod
+            run_score = new_score       
+
+        if run_inclusion:
+            new_mod, new_score = kfold_stepwise_inclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
+            if new_score > best_score:
+                best_mod = new_mod
+                best_score = new_score
+                run_inclusion = False
+                failed_model_counter = 0
+            else:
+                if len(new_mod[1]) == 1:
+                    run_inclusion = False
+                else:
+                    run_inclusion = True
+                failed_model_counter += 1
+        else:
+            new_mod, new_score = kfold_stepwise_exclusion(config, run_mod[0], run_mod[1], X_train, X_test, model_type, score_type)
             if new_score > best_score:
                 best_mod = new_mod
                 best_score = new_score      
@@ -574,6 +642,90 @@ def stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, mode
     
     return total2
 
+def kfold_stepwise_tree_finder(config, categories, X1_train, X1_test, total_tree, model_types=['LogisticRegression'], score_type='accuracy'):
+    """
+    Build this tree in a stepwise recursive way
+    input:
+        config: config object
+        categories: a tuple of the lists 
+        all_model_struc: a list of all models 
+        X1_train: the x train data
+        X1_test: the x test data
+        total_tree: a list pf the biggest models
+    output:
+        list of binary comparisons
+    """
+    # X_train, X_test = split_data_set(categories, X1_train)
+    X_train = X1_train.loc[X1_train['Y'].isin(categories)]
+    X_test = []
+    if len(categories) <= 2:
+        if len(categories) == 2:
+            two_cat_mod = ((categories[0],), (categories[1],))
+            top_score = 0
+            top_model = 0
+            for mod_type in model_types:
+                tested_mods = kfold_build_single_models(config, [two_cat_mod], X_train, score_type=score_type, train_type=mod_type)
+                sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
+                score = sorted_d_desc[0][1]
+                if score > top_score:
+                    top_score = score
+                    top_model_type = mod_type
+            total_tree[two_cat_mod] = top_model_type
+            config.log.info(f'Stepwise layer found best split: {two_cat_mod} with mod type {top_model_type}')
+            return total_tree
+        else:
+            return total_tree
+    
+    top_score = 0
+    top_model = None
+    top_model_type = None
+    for mod_type in model_types:
+        config.log.info(f'Finding stepwise layer for {mod_type} with categories: {categories}')
+        try:
+            highest_model, best_score = kfold_stepwise_layer_finder(config, categories, X_train, X_test, mod_type, score_type)
+        except Exception as e:
+            raise e
+            config.log.info(f'Error in model search of {e}')
+        config.log.info(f'Stepwise layer for {mod_type}: {highest_model} is {best_score}')
+        if best_score > top_score:
+            top_score = best_score
+            top_model = highest_model
+            top_model_type = mod_type
+            
+    config.log.info(f'Stepwise layer found best split: {top_model} with mod type {top_model_type}')
+    total_tree[top_model] = top_model_type
+    total1 = kfold_stepwise_tree_finder(config, tuple(top_model[0]), X1_train, X1_test, total_tree, model_types=model_types, score_type=score_type)
+    total2 = kfold_stepwise_tree_finder(config, tuple(top_model[1]),  X1_train, X1_test, total1, model_types=model_types, score_type=score_type)
+    
+    return total2
+
+def kfold_build_single_models(config, models_list: list, train_data, score_type='accuracy', train_type='LogisticRegression') -> list:
+    """
+    Builds all single models
+    input:
+        config: config object
+        models_list: list of 2 elements lists with models to be produced e.g [[(1,2,3),(4,)],[(1,3), (2,)]]
+        train_data: data that will be used to train all models 
+        score_type: The metric we are looking to maximise
+    output:
+        returns list of models
+    """
+    trained_model_lists = dict()
+
+    if isinstance(train_type, list):
+        for i in range(len(models_list)):
+            new_mod = mod.single_model(models_list[i], score_type=score_type)
+            score = new_mod.kfold_train(train_data, model_type = train_type[i])
+            trained_model_lists[tuple(models_list[i])] = score
+            config.log.debug(f'Finished training model {models_list[i]}')
+    else:
+        for i in range(len(models_list)):
+            new_mod = mod.single_model(models_list[i], score_type=score_type)
+            score = new_mod.kfold_train(train_data, model_type = train_type)
+            trained_model_lists[tuple(models_list[i])] = score
+            config.log.debug(f'Finished training model {models_list[i]}')
+    return trained_model_lists
+
 def stepwise_tree(categories, X1_train, X1_test, total_tree):
     """
     Build this tree in a stepwise recursive way
@@ -603,7 +755,7 @@ def stepwise_tree(categories, X1_train, X1_test, total_tree):
 
 def split_data_set(categories, data):
     cut_data_set = data.loc[data['Y'].isin(categories)]
-    X_train, X_test, y_train, y_test = train_test_split(cut_data_set, cut_data_set['Y'], test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(cut_data_set, cut_data_set['Y'], test_size=0.1, random_state=42)
     return (X_train, X_test)
 
 def to_labels(probs: np.ndarray, threshold: float) -> np.ndarray:
@@ -630,14 +782,14 @@ def find_cutoff(model, data_df, Y, type='ROC', skip_cutoff=False):
         fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
         optimal_idx = np.argmax(tpr - fpr)
         cutoff = thresholds[optimal_idx]
-    
+
     elif type == 'precision-recall':
         #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
         precision, recall, thresholds = precision_recall_curve(Y, predict_probabilities)
         fscore = (2 * precision * recall) / (precision + recall)
         ix = np.argmax(fscore)
         cutoff = thresholds[ix]
-    
+
     elif type == 'f1':
         #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
         thresholds = np.arange(0, 1, 0.01)
@@ -645,13 +797,52 @@ def find_cutoff(model, data_df, Y, type='ROC', skip_cutoff=False):
         # y_pred = predict_probabilities[:, None] >= thresholds
         # scores = [f1_score(Y, y_pred[:, i].astype(int)) for i in range(y_pred.shape[1])]
         cutoff = thresholds[np.argmax(scores)]
-    
+
     elif type == 'accuracy':
         #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
         thresholds = np.arange(0, 1, 0.001)
         scores = [accuracy_score(Y, to_labels(predict_probabilities, t)) for t in thresholds]
         cutoff = thresholds[np.argmax(scores)]
     return cutoff
+
+def kfold_find_cutoff(model, data_df, Y, type='ROC', skip_cutoff=False):
+    if skip_cutoff:
+        return None
+    predicted_both = cross_val_predict(model, data_df, Y, method='predict_proba')
+    predict_probabilities = predicted_both[:, 1]
+    # accuracy = accuracy_score(Y, predicted_both)
+
+    if type == 'ROC' or type == 'accuracy':
+        # Find Cutoff using Youden's J statistic
+        fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+        optimal_idx = np.argmax(tpr - fpr)
+        cutoff = thresholds[optimal_idx]
+
+    elif type == 'precision-recall':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        precision, recall, thresholds = precision_recall_curve(Y, predict_probabilities)
+        fscore = (2 * precision * recall) / (precision + recall)
+        ix = np.argmax(fscore)
+        cutoff = thresholds[ix]
+
+    elif type == 'f1':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        thresholds = np.arange(0, 1, 0.01)
+        scores = [(Y, to_labels(predict_probabilities, t)) for t in thresholds]
+        # y_pred = predict_probabilities[:, None] >= thresholds
+        # scores = [f1_score(Y, y_pred[:, i].astype(int)) for i in range(y_pred.shape[1])]
+        cutoff = thresholds[np.argmax(scores)]
+
+    elif type == 'accuracy':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        thresholds = np.arange(0, 1, 0.001)
+        scores = [accuracy_score(Y, to_labels(predict_probabilities, t)) for t in thresholds]
+        cutoff = thresholds[np.argmax(scores)]
+    
+    new_pred = np.where(predict_probabilities > cutoff, 1, 0)
+    accuracy = accuracy_score(Y, new_pred)
+
+    return cutoff, accuracy
 
 def graph_model(config, tree_model, filename, transform_label = None, model_types = None):
     """

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod, abstractproperty
 import pandas as pd
 from sklearn.linear_model import LogisticRegression, LassoCV, RidgeCV
 from sklearn.metrics import accuracy_score, roc_curve, f1_score, roc_auc_score, confusion_matrix
-from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import cross_val_predict, cross_val_score
 import xgboost as xgb
 from skopt import BayesSearchCV
 from skopt.space import Real, Integer
@@ -62,6 +62,156 @@ class single_model(model):
             self.score_type = 'accuracy'
     def get_model_name(self):
         return self.name
+
+    def kfold_train(self, df: pd.DataFrame, model_type = 'LogisticRegression', response_col = 'Y'):
+        """
+        Trains the model on a given set of data 
+        input:
+            df: pandas dataframe of the train data
+            response_col: optional name of the column with response in it (defauls to Y)
+        output:
+            sds
+        """
+        # Setup
+        if model_type is None:
+            model_type = 'LogisticRegression'
+        self.model_type = model_type
+        train_df = df.copy()
+        train_df[self.name] = train_df[response_col].apply(lambda x: 0 if x in self.type_0 else (1 if x in self.type_1 else 'ROW_NOT_IN_REG') )
+        train_df = train_df.loc[train_df[self.name] != 'ROW_NOT_IN_REG']
+        Y = train_df[self.name].astype(int)
+        skip_cutoff = False
+        score = None
+
+        #Select model
+        if model_type.lower() == 'logisticregression':
+            model = LogisticRegression(solver='lbfgs', max_iter=2000)
+            # Find Cutoff using Youden's J statistic
+            # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
+            # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+            # optimal_idx = np.argmax(tpr - fpr)
+            # self.cutoff = thresholds[optimal_idx]
+            # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
+        elif model_type.lower() == 'logisticregressionlasso':
+            model = make_pipeline(
+                StandardScaler(),
+                SelectFromModel(LassoCV(cv=3)),
+                LogisticRegression(solver='lbfgs', max_iter=2000, C=0.1))
+            # skip_cutoff = True
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'logisticregressionridge':
+            model = make_pipeline(
+                StandardScaler(), 
+                SelectFromModel(RidgeCV(cv=3)), 
+                LogisticRegression(solver='lbfgs', max_iter=2000))
+            
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'xgboost':
+            model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'xgboosthyper':
+            model = xgb.XGBClassifier(objective="binary:logistic")
+            # Find Cutoff using Youden's J statistic
+            
+            # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
+            # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+            # optimal_idx = np.argmax(tpr - fpr)
+            # self.cutoff = thresholds[optimal_idx]
+            #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
+
+            xgb_model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
+            # model = KNeighborsClassifier(n_neighbors=5)
+            # Will have to do hyperparameter tuning
+            # Define search space
+            search_spaces = {   
+                'learning_rate': Real(0.01, 1.0, 'log-uniform'),
+                'max_depth': Integer(2, 20),
+                'reg_lambda': Real(1e-9, 100., 'log-uniform'),
+                'reg_alpha': Real(1e-9, 100., 'log-uniform'),
+                'gamma': Real(1e-9, 0.5, 'log-uniform'),  
+                'n_estimators': Integer(10, 1000)
+            }
+            bayes_cv = BayesSearchCV(
+                                estimator = xgb_model,                                    
+                                search_spaces = search_spaces,                      
+                                scoring = 'roc_auc',                                  
+                                cv = StratifiedKFold(n_splits=3, shuffle=True),                                
+                                n_iter = 3,                                      
+                                n_points = 5,                                       
+                                n_jobs = -1,                                                                                
+                                verbose = 1,
+                                random_state=42,
+                                refit=True
+            )  
+            
+            np.int = int
+            _ = bayes_cv.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            model = xgb.XGBClassifier(
+                n_jobs = -1,
+                objective = 'binary:logistic',
+                eval_metric = 'auc', 
+                **bayes_cv.best_params_
+            )
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'svm':
+            model = make_pipeline(StandardScaler(), svm.SVC(probability=True))
+            # model = svm.SVC(probability=True)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'randomforest':
+            model = RandomForestClassifier(n_estimators=100)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'knn':
+            # model = KNeighborsClassifier()
+            model = KNeighborsClassifier(n_neighbors=10)
+            skip_cutoff = True
+        elif model_type.lower() == 'knnhyper':
+            # Set up GridSearchCV
+            # model = KNeighborsClassifier()
+            param_grid = {'n_neighbors': range(1,31)}
+            knn = KNeighborsClassifier()
+            model = GridSearchCV(knn, param_grid, cv=5, scoring='accuracy')
+            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            skip_cutoff = True
+            self.score = model.best_score_
+            self.fitted_model = model   
+            return self.score
+        else:
+            print(f"nothing found for {model_type.lower()}")
+            model = LogisticRegression(solver='sag', max_iter=2000)
+
+            # Find Cutoff using Youden's J statistic
+            # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
+            # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+            # optimal_idx = np.argmax(tpr - fpr)
+            # self.cutoff = thresholds[optimal_idx]
+            #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
+
+            # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            # XGBoost, Neural Network, Stukel model, anyother will work 
+            # beat multinomial regression 
+        if not skip_cutoff:
+            try:
+                self.cutoff, model_score = mf.kfold_find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type, skip_cutoff=skip_cutoff)
+                self.score = model_score
+                self.fitted_model = model
+                return self.score
+            except Exception as e:
+                print(f'Failed to find cutoff due to {e}')
+                raise e
+                self.cutoff = None
+        else:
+            return self.score   
+
+        kf = KFold(n_splits=5, shuffle=True, random_state=42)
+        cross_val_scores = cross_val_score(model, train_df.drop([response_col,self.name], axis=1), Y, cv=kf)
+        self.score = cross_val_scores.mean()
+        # model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+        self.fitted_model = model
+
+        return cross_val_scores.mean()
     
     def train(self, df: pd.DataFrame, model_type = 'LogisticRegression', response_col = 'Y'):
         """

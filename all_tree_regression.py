@@ -27,7 +27,7 @@ def main(config):
     tree_len = 6
     all_tree_struc = mf.defined_all_trees(tree_len)
     all_model_struc = mf.single_models_from_trees(all_tree_struc)
-    all_models = mf.build_single_models(all_model_struc, X1_train)
+    all_models = mf.build_single_models(config, all_model_struc, X1_train)
     n=1
     top_model = []
     top_accuarcy = 0

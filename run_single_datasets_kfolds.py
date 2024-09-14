@@ -49,7 +49,7 @@ def main(filename, model_types):
     categories = tuple(df['Y'].unique())
 
     config.log.info('Beginning of stepwise tree finder.')
-    best_tree = mf.stepwise_tree_finder(config, categories, X_train, [], {}, model_types=model_types, score_type=score_type)
+    best_tree = mf.kfold_stepwise_tree_finder(config, categories, X_train, [], {}, model_types=model_types, score_type=score_type)
     config.log.info('Finished stepwise tree finder.')
     config.log.info(f"Took: {round(time.perf_counter()-start,3)} to do find best tree.")
     model_strucs = list(best_tree.keys())
@@ -57,7 +57,7 @@ def main(filename, model_types):
     config.log.info(model_strucs)
     config.log.info(tree_types)
     best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories, transform_label=transform_label)
-    mf.graph_model(config, best_trained_model, filename, transform_label=transform_label, model_types=model_types)
+    mf.graph_model(config, best_trained_model, "kfolds_" + filename, transform_label=transform_label, model_types=model_types)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
