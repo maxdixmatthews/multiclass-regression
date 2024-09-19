@@ -807,9 +807,46 @@ def find_cutoff(model, data_df, Y, type='ROC', skip_cutoff=False):
 
 def kfold_find_cutoff(model, data_df, Y, type='ROC', skip_cutoff=False):
     if skip_cutoff:
-        return None
+        return None, None
     predicted_both = cross_val_predict(model, data_df, Y, method='predict_proba')
     predict_probabilities = predicted_both[:, 1]
+    # accuracy = accuracy_score(Y, predicted_both)
+
+    if type == 'ROC' or type == 'accuracy':
+        # Find Cutoff using Youden's J statistic
+        fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
+        optimal_idx = np.argmax(tpr - fpr)
+        cutoff = thresholds[optimal_idx]
+
+    elif type == 'precision-recall':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        precision, recall, thresholds = precision_recall_curve(Y, predict_probabilities)
+        fscore = (2 * precision * recall) / (precision + recall)
+        ix = np.argmax(fscore)
+        cutoff = thresholds[ix]
+
+    elif type == 'f1':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        thresholds = np.arange(0, 1, 0.01)
+        scores = [(Y, to_labels(predict_probabilities, t)) for t in thresholds]
+        # y_pred = predict_probabilities[:, None] >= thresholds
+        # scores = [f1_score(Y, y_pred[:, i].astype(int)) for i in range(y_pred.shape[1])]
+        cutoff = thresholds[np.argmax(scores)]
+
+    elif type == 'accuracy':
+        #Used https://machinelearningmastery.com/threshold-moving-for-imbalanced-classification/?fbclid=IwAR1PQcjZVTuAIQrWsYiaB32h2iao5zBl8UP8oIQgPcD76QPOQjBO8ggoqj0
+        thresholds = np.arange(0, 1, 0.001)
+        scores = [accuracy_score(Y, to_labels(predict_probabilities, t)) for t in thresholds]
+        cutoff = thresholds[np.argmax(scores)]
+    
+    new_pred = np.where(predict_probabilities > cutoff, 1, 0)
+    accuracy = accuracy_score(Y, new_pred)
+
+    return cutoff, accuracy
+
+def kfold_find_cutoff_already_cv(predict_probabilities, Y, type='ROC', skip_cutoff=False):
+    if skip_cutoff:
+        return None, None
     # accuracy = accuracy_score(Y, predicted_both)
 
     if type == 'ROC' or type == 'accuracy':

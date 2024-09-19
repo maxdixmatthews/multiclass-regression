@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod, abstractproperty
 import pandas as pd
-from sklearn.linear_model import LogisticRegression, LassoCV, RidgeCV
+from sklearn.linear_model import LogisticRegression, LassoCV, RidgeCV, Lasso
 from sklearn.metrics import accuracy_score, roc_curve, f1_score, roc_auc_score, confusion_matrix
 from sklearn.model_selection import cross_val_predict, cross_val_score
 import xgboost as xgb
@@ -97,15 +97,26 @@ class single_model(model):
         elif model_type.lower() == 'logisticregressionlasso':
             model = make_pipeline(
                 StandardScaler(),
-                SelectFromModel(LassoCV(cv=3)),
-                LogisticRegression(solver='lbfgs', max_iter=2000, C=0.1))
+                SelectFromModel(Lasso()),
+                LogisticRegression(solver='lbfgs', max_iter=4000))
+            param_grid = {
+                'selectfrommodel__estimator__alpha': [0.01, 0.1],
+                'logisticregression__C': [0.01, 0.1, 1]
+            }
+
+            model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
+            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            skip_cutoff = True
+            self.score = model.best_score_
+            self.fitted_model = model   
+            return self.score
             # skip_cutoff = True
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'logisticregressionridge':
             model = make_pipeline(
                 StandardScaler(), 
                 SelectFromModel(RidgeCV(cv=3)), 
-                LogisticRegression(solver='lbfgs', max_iter=2000))
+                LogisticRegression(solver='lbfgs', max_iter=4000))
             
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'xgboost':
@@ -203,7 +214,7 @@ class single_model(model):
                 raise e
                 self.cutoff = None
         else:
-            return self.score   
+            return self.score
 
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
         cross_val_scores = cross_val_score(model, train_df.drop([response_col,self.name], axis=1), Y, cv=kf)

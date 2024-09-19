@@ -25,7 +25,7 @@ from networkx.drawing.nx_pydot import graphviz_layout
 from datetime import datetime 
 import os
 import argparse
-
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 def main(filename, model_types):
     # config.log.info('Max Rocks')
@@ -44,7 +44,7 @@ def main(filename, model_types):
     df = pd.read_csv(dataset_location)
     df.drop(df.columns[0], axis=1, inplace=True)
     transform_label = mf.map_categorical_target(config, df)
-    X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], stratify=df['Y'], test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42)
     score_type = 'accuracy'
     categories = tuple(df['Y'].unique())
 
