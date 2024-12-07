@@ -85,7 +85,8 @@ class single_model(model):
 
         #Select model
         if model_type.lower() == 'logisticregression':
-            model = LogisticRegression(solver='lbfgs', max_iter=2000)
+            model = make_pipeline(
+                StandardScaler(), LogisticRegression(solver='lbfgs', max_iter=4000))
             # Find Cutoff using Youden's J statistic
             # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
             # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
@@ -180,13 +181,14 @@ class single_model(model):
         elif model_type.lower() == 'knnhyper':
             # Set up GridSearchCV
             # model = KNeighborsClassifier()
-            param_grid = {'n_neighbors': range(1,31)}
-            knn = KNeighborsClassifier()
+            param_grid = {'kneighborsclassifier__n_neighbors': range(1,31)}
+            knn = make_pipeline(StandardScaler(), KNeighborsClassifier())
+            knn = make_pipeline(KNeighborsClassifier())
             model = GridSearchCV(knn, param_grid, cv=5, scoring='accuracy')
             model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
             self.score = model.best_score_
-            self.fitted_model = model   
+            self.fitted_model = model
             return self.score
         else:
             print(f"nothing found for {model_type.lower()}")
@@ -245,7 +247,8 @@ class single_model(model):
         
         #Select model
         if model_type.lower() == 'logisticregression':
-            model = LogisticRegression(solver='lbfgs', max_iter=2000)
+            model = make_pipeline(
+                StandardScaler(), LogisticRegression(solver='lbfgs', max_iter=4000))
             # Find Cutoff using Youden's J statistic
             # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
             # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
@@ -329,10 +332,14 @@ class single_model(model):
         elif model_type.lower() == 'knnhyper':
             # Set up GridSearchCV
             # model = KNeighborsClassifier()
-            param_grid = {'n_neighbors': range(1,31)}
-            knn = KNeighborsClassifier()
-            model = GridSearchCV(knn, param_grid, cv=3, scoring='accuracy')
+            param_grid = {'kneighborsclassifier__n_neighbors': range(1,31)}
+            knn = make_pipeline(StandardScaler(), KNeighborsClassifier())
+            model = GridSearchCV(knn, param_grid, cv=5, scoring='accuracy')
+            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
+            self.score = model.best_score_
+            self.fitted_model = model
+            
         else:
             print(f"nothing found for {model_type.lower()}")
             model = LogisticRegression(solver='sag', max_iter=2000)

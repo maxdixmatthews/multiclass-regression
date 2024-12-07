@@ -99,7 +99,7 @@ def main(filename, model_types):
     tree_types = [model_types]*len(best_model)
     config.log.info(model_strucs)
     config.log.info(tree_types)
-    best_trained_model = mf.build_best_tree(config, X2_test, X2_train, y2_test, score_type, tree_types, best_model, categories, built_mods=best_built_models, transform_label=transform_label)
+    best_trained_model = mf.build_best_tree(config, X2_test, X2_train, y2_test, score_type, tree_types, best_model, categories, built_mods=best_built_models, transform_label=transform_label)[0]
     mf.graph_model(config, best_trained_model, filename, transform_label=transform_label, model_types=[model_types])
 
 if __name__ == '__main__':

@@ -726,6 +726,33 @@ def kfold_build_single_models(config, models_list: list, train_data, score_type=
             config.log.debug(f'Finished training model {models_list[i]}')
     return trained_model_lists
 
+def kfold_return_single_models(config, models_list: list, train_data, score_type='accuracy', train_type='LogisticRegression') -> list:
+    """
+    Builds all single models
+    input:
+        config: config object
+        models_list: list of 2 elements lists with models to be produced e.g [[(1,2,3),(4,)],[(1,3), (2,)]]
+        train_data: data that will be used to train all models 
+        score_type: The metric we are looking to maximise
+    output:
+        returns list of models
+    """
+    trained_model_lists = dict()
+
+    if isinstance(train_type, list):
+        for i in range(len(models_list)):
+            new_mod = mod.single_model(models_list[i], score_type=score_type)
+            score = new_mod.kfold_train(train_data, model_type = train_type[i])
+            trained_model_lists[tuple(models_list[i])] = new_mod
+            config.log.debug(f'Finished training model {models_list[i]}')
+    else:
+        for i in range(len(models_list)):
+            new_mod = mod.single_model(models_list[i], score_type=score_type)
+            score = new_mod.kfold_train(train_data, model_type = train_type)
+            trained_model_lists[tuple(models_list[i])] = new_mod
+            config.log.debug(f'Finished training model {models_list[i]}')
+    return trained_model_lists
+
 def stepwise_tree(categories, X1_train, X1_test, total_tree):
     """
     Build this tree in a stepwise recursive way
@@ -1053,7 +1080,31 @@ def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, bes
         string_categories = [str(i) for i in categories]
     config.log.info(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=string_categories))
     print(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=string_categories))
-    return tree_model
+
+    return tree_model, y_test.tolist(), output['y_pred'].to_list()
+
+def kfold_build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None, transform_label = None):
+    # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
+    if not built_mods:
+        built_mods = kfold_return_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
+    # test_single_models(built_mods, X_test)
+    built_mods = list(built_mods.values())
+    config.log.info(f'Best models are {built_mods}')
+    tree_model = mod.tree_model('tree_mod1', built_mods, best_tree)
+    output = tree_model.predict(X_test)
+    tree_model.model_score(y_test.tolist())
+    accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
+    config.log.info(f'Accuracy is {accuracy}')
+    if transform_label:
+        output['y_pred'] = transform_label.inverse_transform(output['y_pred'])
+        y_test = transform_label.inverse_transform(y_test)
+        string_categories = transform_label.classes_
+    else:
+        string_categories = [str(i) for i in categories]
+    config.log.info(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=string_categories))
+    print(classification_report(y_test.tolist(), output['y_pred'].to_list(), target_names=string_categories))
+
+    return tree_model, y_test.tolist(), output['y_pred'].to_list()
 
 def map_categorical_target(config, df):
     """

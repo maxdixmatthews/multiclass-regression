@@ -37,6 +37,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import GridSearchCV
 from sklearn.multiclass import OneVsRestClassifier
+from sklearn.neural_network import MLPClassifier
 
 def main():
     # config.log.info('Max Rocks')
@@ -46,25 +47,27 @@ def main():
     start = time.perf_counter()
 
     files = [
-        'letter_recognition.csv',
-        'mfeat-factors.csv',
-        'mfeat-fouriers.csv',
-        'mfeat-karhunen.csv',
-        'mfeat-morphological.csv',
-        'mfeat-pixel.csv',
-        'mfeat-zernlike.csv',
-        'optdigits.csv',
-        'pageblocks.csv',
-        'handwritten_digits.csv',
-        'satimage.csv',
-        'image_segment.csv',
-        'beans_data.csv',
+        # 'letter_recognition.csv',
+        # 'mfeat-factors.csv',
+        # 'mfeat-fouriers.csv',
+        # 'mfeat-karhunen.csv',
+        # 'mfeat-morphological.csv',
+        # 'mfeat-pixel.csv',
+        # 'mfeat-zernlike.csv',
+        # 'optdigits.csv',
+        # 'pageblocks.csv',
+        # 'handwritten_digits.csv',
+        # 'satimage.csv',
+        # 'image_segment.csv',
+        # 'beans_data.csv',
         'car_evaluation.csv'
     ]
 
     # print(f'Accuracy: {accuracy:.10f}')
     # print(scores)
-    model_name = "xgboost_OVR"
+    # model_name = "LDA"
+    model_name = "Neural_Network"
+    # model_name = "knn"
     config = Config(model_name)
     config.log.info(f'Beginning of {model_name}.')
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -77,8 +80,15 @@ def main():
         transform_label = mf.map_categorical_target(config, df)
         df_x = df.drop('Y', axis=1)
         Y = df['Y']
-        model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic")
-        model = OneVsRestClassifier(model)
+        # model = LinearDiscriminantAnalysis()
+        model = make_pipeline(StandardScaler(), MLPClassifier(max_iter = 200))
+        # model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic")
+        # model = OneVsRestClassifier(model)
+
+        # Set up GridSearchCV
+        # param_grid = {'n_neighbors': range(1, 31)}
+        # knn = KNeighborsClassifier()
+        # model = GridSearchCV(knn, param_grid, cv=5, scoring='accuracy')
 
         scores = cross_val_score(model, df_x, Y, cv=cv, scoring='accuracy')
         accuracy = scores.mean()
@@ -87,9 +97,6 @@ def main():
 
         print(f"{scores}")
         config.log.info(f"scores {scores}")
-
-
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
