@@ -6,6 +6,8 @@ __pycache__/
 *.docx
 *.png
 *.csv
+*.tar
+*.whl
 
 
 # Ignore all files in the models directory

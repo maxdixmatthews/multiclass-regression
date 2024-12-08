@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ndStepwise"
-version = "0.1.1"
+version = "1.0.0"
 description = "A package to perform ND Stepwise regression for multiclass problems."
 readme = "README.md"
 authors = [
