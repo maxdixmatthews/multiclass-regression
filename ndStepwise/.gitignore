@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.log
+*.tex
+*.pyc
+*.docx
+*.png
+*.csv
+
+
+# Ignore all files in the models directory
+/models/
+/logs/
+/venv/
+/data/*
+/latex_folder/
+/chapters/
+/all_new_images/
+tests/
+/tests/*
