@@ -18,6 +18,7 @@ class CustomJsonFormatter(logging.Formatter):
 
 def setup_logger(file_name, debuging=False):
     """Set up the daily rotating log handler."""
+    logging.getLogger().handlers.clear()
     logger = logging.getLogger("JSONLogger")
     logger.setLevel(logging.DEBUG if debuging else logging.INFO)
     logger.propagate = False
