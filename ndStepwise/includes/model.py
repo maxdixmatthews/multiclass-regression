@@ -123,6 +123,42 @@ class single_model(model):
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'xgboostgpu':
+            model = xgb.XGBClassifier(device='cuda', n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
+        elif model_type.lower() == 'xgboostgpuhyper':
+            xgb_model = xgb.XGBClassifier(device='cuda', objective="binary:logistic", random_state=42)
+            # model = KNeighborsClassifier(n_neighbors=5)
+            # Will have to do hyperparameter tuning
+            # Define search space
+            search_spaces = {   
+                'learning_rate': Real(0.01, 1.0, 'log-uniform'),
+                'max_depth': Integer(2, 20),
+                'reg_lambda': Real(1e-9, 100., 'log-uniform'),
+                'reg_alpha': Real(1e-9, 100., 'log-uniform'),
+                'gamma': Real(1e-9, 0.5, 'log-uniform'),  
+                'n_estimators': Integer(10, 1000)
+            }
+            bayes_cv = BayesSearchCV(
+                                estimator = xgb_model,                                    
+                                search_spaces = search_spaces,                      
+                                scoring = 'roc_auc',                                  
+                                cv = StratifiedKFold(n_splits=3, shuffle=True),                                
+                                n_iter = 3,                                      
+                                n_points = 5,                                       
+                                n_jobs = -1,                                                                                
+                                verbose = 1,
+                                random_state=42,
+                                refit=True
+            )  
+            
+            np.int = int
+            _ = bayes_cv.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            model = xgb.XGBClassifier(
+                n_jobs = -1,
+                objective = 'binary:logistic',
+                eval_metric = 'auc', 
+                **bayes_cv.best_params_
+            )
         elif model_type.lower() == 'xgboosthyper':
             model = xgb.XGBClassifier(objective="binary:logistic")
             # Find Cutoff using Youden's J statistic
@@ -274,6 +310,42 @@ class single_model(model):
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'xgboostgpu':
+            model = xgb.XGBClassifier(device='cuda', n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
+        elif model_type.lower() == 'xgboostgpuhyper':
+            xgb_model = xgb.XGBClassifier(device='cuda', objective="binary:logistic", random_state=42)
+            # model = KNeighborsClassifier(n_neighbors=5)
+            # Will have to do hyperparameter tuning
+            # Define search space
+            search_spaces = {   
+                'learning_rate': Real(0.01, 1.0, 'log-uniform'),
+                'max_depth': Integer(2, 20),
+                'reg_lambda': Real(1e-9, 100., 'log-uniform'),
+                'reg_alpha': Real(1e-9, 100., 'log-uniform'),
+                'gamma': Real(1e-9, 0.5, 'log-uniform'),  
+                'n_estimators': Integer(10, 1000)
+            }
+            bayes_cv = BayesSearchCV(
+                                estimator = xgb_model,                                    
+                                search_spaces = search_spaces,                      
+                                scoring = 'roc_auc',                                  
+                                cv = StratifiedKFold(n_splits=3, shuffle=True),                                
+                                n_iter = 3,                                      
+                                n_points = 5,                                       
+                                n_jobs = -1,                                                                                
+                                verbose = 1,
+                                random_state=42,
+                                refit=True
+            )  
+            
+            np.int = int
+            _ = bayes_cv.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            model = xgb.XGBClassifier(
+                n_jobs = -1,
+                objective = 'binary:logistic',
+                eval_metric = 'auc', 
+                **bayes_cv.best_params_
+            )
         elif model_type.lower() == 'xgboosthyper':
             model = xgb.XGBClassifier(objective="binary:logistic")
             # Find Cutoff using Youden's J statistic

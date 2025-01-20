@@ -20,6 +20,7 @@ def setup_logger(file_name, debuging=False):
     """Set up the daily rotating log handler."""
     logger = logging.getLogger("JSONLogger")
     logger.setLevel(logging.DEBUG if debuging else logging.INFO)
+    logger.propagate = False
 
     log_filename = file_name + "_" + datetime.datetime.now().strftime('%Y-%m-%d.log')
     log_dir = "logs"
@@ -41,6 +42,3 @@ def setup_logger(file_name, debuging=False):
     logger.addHandler(console_handler)
 
     return logger
-
-
-
