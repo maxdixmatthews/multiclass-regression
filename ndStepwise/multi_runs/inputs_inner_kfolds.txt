@@ -1,6 +1,5 @@
 #Logistic Regression Only
 filename=car_evaluation.csv|model_types=LogisticRegression
-filename=car_evaluation.csv|model_types=LogisticRegressionLasso
 filename=mfeat-factors.csv|model_types=LogisticRegression
 filename=mfeat-fouriers.csv|model_types=LogisticRegression
 filename=mfeat-karhunen.csv|model_types=LogisticRegression
