@@ -2,7 +2,7 @@ import pandas as pd
 import concurrent.futures
 import numpy as np
 import math
-from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, cross_validate
+from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, cross_validate, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, roc_curve, ConfusionMatrixDisplay, auc, roc_auc_score, f1_score
@@ -63,45 +63,76 @@ def main(filename, model_types):
 
     # Convert set back to list if needed
     unique_list = list(unique_elements)
+
     model_types = model_types[0]
-    X_train, X_test, y_train, y_test = train_test_split(X2_train, X2_train['Y'], test_size=0.2, random_state=43)
-    for tree in unique_list:
-        built_mods_dict = dict()
-        for node in tree:
-            # X_train, X_test = mf.split_data_set(categories, X2_train)
-            single_mods = mf.build_single_models(config, [node], X_train, score_type=score_type, train_type=model_types)
-            built_mods_dict.update(single_mods) 
-            # mf.test_single_models(single_mods, X_test)
 
-        built_mods = list(built_mods_dict.values())
-        tree_model = mod.tree_model('tree_mod1', built_mods, tree)
-        output = tree_model.predict(X_test)
-        tree_model.model_score(y_test.tolist())
-        accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
-        if accuracy > best_accuracy:
-            best_accuracy = accuracy
-            best_model = tree
-            best_built_models=built_mods_dict
-            config.log.info(f'current best accuracy is {accuracy}')
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=69)
+    dataset = filename
+    # X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42)
+    dataset_location = "data/" + dataset
+    all_fold_score = {}
+    all_fold_time = {}
+    config = Config("all_trees_" + dataset + "_" + "_".join(model_types))
+    df = pd.read_csv(dataset_location)
+    df.drop(df.columns[0], axis=1, inplace=True)
+    transform_label = mf.map_categorical_target(config, df)
+    categories = tuple(df['Y'].unique())
 
-    if transform_label:
-        output['y_pred'] = transform_label.inverse_transform(output['y_pred'])
-        y_test = transform_label.inverse_transform(y_test)
-        string_categories = transform_label.classes_
-    else:
-        string_categories = [str(i) for i in categories]
+    for fold, (train_index, test_index) in enumerate(cv.split(df, df['Y'])):
+        start = time.perf_counter()
+        X_train, X_test = df.iloc[train_index], df.iloc[test_index]
+        y_train, y_test = df['Y'].iloc[train_index], df['Y'].iloc[test_index]
+        print(f"Fold {fold+1}")
+            
+        for tree in unique_list:
+            built_mods_dict = dict()
+            for node in tree:
+                # X_train, X_test = mf.split_data_set(categories, X2_train)
+                single_mods = mf.build_single_models(config, [node], X_train, score_type=score_type, train_type=model_types)
+                built_mods_dict.update(single_mods) 
+                # mf.test_single_models(single_mods, X_test)
 
-    config.log.info(f'Best model is {best_model}')
-    # best_tree = mf.thread_stepwise_tree_finder(config, categories, X_train, X_test, {}, model_types=model_types, score_type=score_type)
-    # config.log.info('Finished stepwise tree finder.')
-    # config.log.info(f"Took: {round(time.perf_counter()-start,3)} to do find best tree.")
-    model_strucs = best_model
-    tree_types = [model_types]*len(best_model)
-    config.log.info(model_strucs)
-    config.log.info(tree_types)
-    best_trained_model = mf.build_best_tree(config, X2_test, X2_train, y2_test, score_type, tree_types, best_model, categories, built_mods=best_built_models, transform_label=transform_label)[0]
-    mf.graph_model(config, best_trained_model, filename, transform_label=transform_label, model_types=[model_types])
+            built_mods = list(built_mods_dict.values())
+            tree_model = mod.tree_model('tree_mod1', built_mods, tree)
+            output = tree_model.predict(X_test)
+            tree_model.model_score(y_test.tolist())
+            accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
+            if accuracy > best_accuracy:
+                best_accuracy = accuracy
+                best_model = tree
+                best_built_models=built_mods_dict
+                config.log.info(f'current best accuracy is {accuracy}')
 
+        if transform_label:
+            output['y_pred'] = transform_label.inverse_transform(output['y_pred'])
+            y_test = transform_label.inverse_transform(y_test)
+            string_categories = transform_label.classes_
+        else:
+            string_categories = [str(i) for i in categories]
+
+        config.log.info(f'Best model is {best_model}')
+        # best_tree = mf.thread_stepwise_tree_finder(config, categories, X_train, X_test, {}, model_types=model_types, score_type=score_type)
+        # config.log.info('Finished stepwise tree finder.')
+        # config.log.info(f"Took: {round(time.perf_counter()-start,3)} to do find best tree.")
+        fold_time = round(time.perf_counter()-start,3)
+        config.log.info(f"Fold {fold+1} took: {fold_time} to do find best tree.")
+        all_fold_time[f"Fold {fold+1}"] = fold_time
+        model_strucs = best_model
+        tree_types = [model_types]*len(best_model)
+        config.log.info(model_strucs)
+        config.log.info(tree_types)
+        best_trained_model = mf.build_best_tree(config, X2_test, X2_train, y2_test, score_type, tree_types, best_model, categories, built_mods=best_built_models, transform_label=transform_label)[0]
+        mf.graph_model(config, best_trained_model, filename, transform_label=transform_label, model_types=[model_types])
+        config.log.info(f'Fold {fold+1}: {best_trained_model.score}')
+        all_fold_score[f"Fold {fold+1}"] = best_trained_model.score
+
+    average = sum(all_fold_score.values()) / len(all_fold_score)
+    config.log.info(f"Average score: {average}")
+    config.log.info(f"All the folds scores {all_fold_score}")
+    config.log.info(f"All the folds time in seconds {all_fold_time}")
+    for handler in config.log.handlers:
+        handler.close()
+        config.log.removeHandler(handler)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('-f', '--filename', required=True, type=str, help='The name of the file to process')

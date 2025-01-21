@@ -93,7 +93,9 @@ def main(filename, model_types):
     # average = sum(all_fold_score) / len(all_fold_score)
     config.log.info(f"All scores: {all_fold_score}")
     config.log.info(f"All times: {all_fold_time}")
-
+    for handler in config.log.handlers:
+        handler.close()
+        config.log.removeHandler(handler)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     # parser.add_argument('-f', '--filename', required=True, type=str, help='The name of the file to process')
