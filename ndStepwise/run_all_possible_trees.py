@@ -87,8 +87,8 @@ def main(filename, model_types):
         for tree in unique_list:
             built_mods_dict = dict()
             for node in tree:
-                # X_train, X_test = mf.split_data_set(categories, X2_train)
-                single_mods = mf.build_single_models(config, [node], X_train, score_type=score_type, train_type=model_types)
+                X2_train, X2_test = mf.split_data_set(categories, X_train)
+                single_mods = mf.build_single_models(config, [node], X2_train, score_type=score_type, train_type=model_types)
                 built_mods_dict.update(single_mods) 
                 # mf.test_single_models(single_mods, X_test)
 
