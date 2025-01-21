@@ -1,0 +1,8 @@
+#Start with my comments, then the models I've done
+#Logistic Regression Only
+
+#All of the others
+#xgboostgpu
+#knnhyper
+#letter_recognition
+#all models

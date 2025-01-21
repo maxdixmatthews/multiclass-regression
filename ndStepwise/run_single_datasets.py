@@ -33,6 +33,7 @@ def main(filename, model_types):
     # config.log.debug('THIS SHOULDNT LOG')
     # return
     print(filename)
+    print(model_types)
     if len(filename) <= 1:
         raise Exception(f"Improper filename of: {filename}")
     start = time.perf_counter()

@@ -1,31 +1,11 @@
+from sklearn.model_selection import train_test_split
 import pandas as pd
-import concurrent.futures
-import numpy as np
-import math
-from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, cross_validate
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report, roc_curve, ConfusionMatrixDisplay, auc, roc_auc_score, f1_score
-from sklearn import datasets
-from statistics import mean
-import includes.model as mod
-import pandas as pd
-from joblib import dump, load
-from .includes.config import Config;
-from .includes import model_functions as mf
+from ndStepwise.includes.config import Config
+from ndStepwise.includes import model_functions as mf
 import time
-from itertools import combinations
-import random
-from graphviz import Digraph
-import matplotlib.pyplot as plt
-from sklearn.datasets import make_classification
-import matplotlib.pyplot as plt
-import networkx as nx
-from networkx.drawing.nx_pydot import graphviz_layout
-from datetime import datetime 
-import os
 import argparse
 import ast
+from tensorflow.keras.datasets import mnist
 
 def main(filename, model_types, tree_structure):
     # config.log.info('Max Rocks')
@@ -40,13 +20,39 @@ def main(filename, model_types, tree_structure):
     dataset = filename
     config = Config(dataset)
     config.log.info(f'Beginning of {dataset}.')
-    dataset_location = "data/" + dataset
-    df = pd.read_csv(dataset_location)
-    df.drop(df.columns[0], axis=1, inplace=True)
-    transform_label = mf.map_categorical_target(config, df)
-    X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], stratify=df['Y'], test_size=0.2, random_state=42)
+
+    if dataset.lower() == 'mnist':
+        (X_train, y_train), (X_test, y_test) = mnist.load_data()
+
+        # Flatten the 28x28 images into a single 784-length vector per image
+        X_train_flattened = X_train.reshape(X_train.shape[0], -1)
+        X_test_flattened = X_test.reshape(X_test.shape[0], -1)
+
+        # Convert to a Pandas DataFrame
+        X_train_df = pd.DataFrame(X_train_flattened)
+        X_test_df = pd.DataFrame(X_test_flattened)
+
+        # Optionally, add column names (e.g., "pixel_0", "pixel_1", ..., "pixel_783")
+        X_train_df.columns = [f"pixel_{i}" for i in range(X_train_flattened.shape[1])]
+        X_test_df.columns = [f"pixel_{i}" for i in range(X_test_flattened.shape[1])]
+
+        # Add the labels as a separate column if desired
+        X_train_df['Y'] = y_train
+        X_test_df['Y'] = y_test
+        X_train = X_train_df
+        X_test = X_test_df
+        y_test = y_test
+
+        categories = tuple(X_train_df['Y'].unique())
+        transform_label = None
+    else:
+        dataset_location = "data/" + dataset
+        df = pd.read_csv(dataset_location)
+        df.drop(df.columns[0], axis=1, inplace=True)
+        transform_label = mf.map_categorical_target(config, df)
+        X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], stratify=df['Y'], test_size=0.2, random_state=42)
+        categories = tuple(df['Y'].unique())
     score_type = 'accuracy' 
-    categories = tuple(df['Y'].unique())
     model_strucs = list(tree_structure) 
     tree_types = list(model_types)
 
@@ -54,7 +60,7 @@ def main(filename, model_types, tree_structure):
     config.log.info(model_strucs)
     config.log.info(tree_types)
 
-    best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories, transform_label=transform_label)
+    best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories, transform_label=transform_label)[0]
     mf.graph_model(config, best_trained_model, filename, transform_label=transform_label, model_types=model_types)
 
 if __name__ == '__main__':
@@ -65,5 +71,5 @@ if __name__ == '__main__':
     args = parser.parse_args()  
     main(args.filename, ast.literal_eval(args.model_types), ast.literal_eval(args.tree_structure))
 
-# [((3,), (2, 0, 1)), ((2, 0), (1,)), ((2,), (0,))]
-# ['svm', 'svm', 'svm']
+# "[((3,), (2, 0, 1)), ((2, 0), (1,)), ((2,), (0,))]"
+# "['svm', 'svm', 'svm']""

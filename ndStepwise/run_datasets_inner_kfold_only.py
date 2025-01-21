@@ -48,7 +48,7 @@ def main(model_types):
         # 'image_segment.csv',
         # 'beans_data.csv',
     ]
-    model_name = '_'.join(model_types) + '_NO_K'
+    model_name = '_'.join(model_types)
     config = Config(model_name)
     for filename in files:
         print(filename)
