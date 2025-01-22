@@ -25,34 +25,30 @@ from networkx.drawing.nx_pydot import graphviz_layout
 from datetime import datetime 
 import os
 import argparse
+import itertools
 
 
 def main(filename, model_types):
-    # config.log.info('Max Rocks')
-    # config.log.error('This is an extra long message about how there was an error because Max wants to see if there is a weird format when messages get extra long.')
-    # config.log.debug('THIS SHOULDNT LOG')
-    # return
+
     print(filename)
     if len(filename) <= 1:
         raise Exception(f"Improper filename of: {filename}")
-    start = time.perf_counter()
-   
+
+    score_type = 'accuracy'
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=69)
     dataset = filename
-    config = Config(dataset)
-    config.log.info(f'Beginning of {dataset}.')
+
     dataset_location = "data/" + dataset
+    all_fold_score = {}
+    all_fold_time = {}
+    config = Config("all_trees_" + dataset + "_" + "_".join(model_types))
     df = pd.read_csv(dataset_location)
     df.drop(df.columns[0], axis=1, inplace=True)
+
     transform_label = mf.all_trees_map_categorical_target(config, df)
-    # df['Y'] = df['Y'] + 1
-    # transform_label = None
-    X2_train, X2_test, y_train, y2_test = train_test_split(df, df['Y'], stratify=df['Y'], test_size=0.2, random_state=42)
-    score_type = 'accuracy'
     categories = tuple(df['Y'].unique())
+
     trees_defined = mf.defined_all_trees(len(categories))
-    best_accuracy = 0
-    best_model = ()
-    # X_train, X_test, y_train, y_test = train_test_split(X2_train, X2_train['Y'], stratify=X2_train['Y'], test_size=0.2, random_state=42)
     
     unique_elements = set()
     for sublist in trees_defined:
@@ -64,65 +60,48 @@ def main(filename, model_types):
     # Convert set back to list if needed
     unique_list = list(unique_elements)
 
-    model_types = model_types[0]
-
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=69)
-    dataset = filename
-    # X_train, X_test, y_train, y_test = train_test_split(df, df['Y'], test_size=0.2, random_state=42)
-    dataset_location = "data/" + dataset
-    all_fold_score = {}
-    all_fold_time = {}
-    config = Config("all_trees_" + dataset + "_" + "_".join(model_types))
-    df = pd.read_csv(dataset_location)
-    df.drop(df.columns[0], axis=1, inplace=True)
-    transform_label = mf.map_categorical_target(config, df)
-    categories = tuple(df['Y'].unique())
-
     for fold, (train_index, test_index) in enumerate(cv.split(df, df['Y'])):
         start = time.perf_counter()
-        X_train, X_test = df.iloc[train_index], df.iloc[test_index]
-        y_train, y_test = df['Y'].iloc[train_index], df['Y'].iloc[test_index]
+        X_full_train, X_full_test = df.iloc[train_index], df.iloc[test_index]
+        y_full_train, y_full_test = df['Y'].iloc[train_index], df['Y'].iloc[test_index]
         print(f"Fold {fold+1}")
-            
+        X_train, X_test, y_train, y_test = train_test_split(X_full_train, X_full_train['Y'], stratify=X_full_train['Y'], test_size=0.3, random_state=42)
+        best_accuracy = 0
+        best_model = ()
+        best_types = []
+
+        elements = tuple(range(0, len(categories)))
+        unique_list = list(mf.all_nested_dichotomies(elements))
+
         for tree in unique_list:
-            built_mods_dict = dict()
-            for node in tree:
-                X2_train, X2_test = mf.split_data_set(categories, X_train)
-                single_mods = mf.build_single_models(config, [node], X2_train, score_type=score_type, train_type=model_types)
-                built_mods_dict.update(single_mods) 
-                # mf.test_single_models(single_mods, X_test)
+            all_possible_model_types = itertools.product(model_types, repeat=len(unique_list[0]))
+            for tree_types in all_possible_model_types:
+                model_strucs = tree
+                
+                try:
+                    trained_model = mf.build_tree(config, X_test, X_train, y_test, score_type, list(tree_types), model_strucs, categories, transform_label=transform_label)[0]
+                except Exception as e:
+                    print("RED ALERT! RED ALERT!")
+                    print(f"Failed at tree {tree}")
+                    raise e
 
-            built_mods = list(built_mods_dict.values())
-            tree_model = mod.tree_model('tree_mod1', built_mods, tree)
-            output = tree_model.predict(X_test)
-            tree_model.model_score(y_test.tolist())
-            accuracy = accuracy_score(y_test.tolist(), output['y_pred'].to_list())
-            if accuracy > best_accuracy:
-                best_accuracy = accuracy
-                best_model = tree
-                best_built_models=built_mods_dict
-                config.log.info(f'current best accuracy is {accuracy}')
-
-        if transform_label:
-            output['y_pred'] = transform_label.inverse_transform(output['y_pred'])
-            y_test = transform_label.inverse_transform(y_test)
-            string_categories = transform_label.classes_
-        else:
-            string_categories = [str(i) for i in categories]
+                if trained_model.score > best_accuracy:
+                    best_accuracy = trained_model.score
+                    best_model = tree
+                    best_types = list(tree_types)
+                    config.log.info(f'current best accuracy is {trained_model.score}')
 
         config.log.info(f'Best model is {best_model}')
-        # best_tree = mf.thread_stepwise_tree_finder(config, categories, X_train, X_test, {}, model_types=model_types, score_type=score_type)
-        # config.log.info('Finished stepwise tree finder.')
-        # config.log.info(f"Took: {round(time.perf_counter()-start,3)} to do find best tree.")
+
         fold_time = round(time.perf_counter()-start,3)
         config.log.info(f"Fold {fold+1} took: {fold_time} to do find best tree.")
         all_fold_time[f"Fold {fold+1}"] = fold_time
+
         model_strucs = best_model
-        tree_types = [model_types]*len(best_model)
         config.log.info(model_strucs)
-        config.log.info(tree_types)
-        best_trained_model = mf.build_best_tree(config, X2_test, X2_train, y2_test, score_type, tree_types, best_model, categories, built_mods=best_built_models, transform_label=transform_label)[0]
-        mf.graph_model(config, best_trained_model, filename, transform_label=transform_label, model_types=[model_types])
+        config.log.info(best_types)
+        best_trained_model = mf.build_best_tree(config, X_full_test, X_full_train, y_full_test, score_type, best_types, best_model, categories, transform_label=transform_label)[0]
+        mf.graph_model(config, best_trained_model, f"all_trees_fold_{fold+1}_" + filename, transform_label=transform_label, model_types=model_types)
         config.log.info(f'Fold {fold+1}: {best_trained_model.score}')
         all_fold_score[f"Fold {fold+1}"] = best_trained_model.score
 
