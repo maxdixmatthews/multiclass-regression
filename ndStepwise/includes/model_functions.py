@@ -989,6 +989,28 @@ def defined_all_models(n: int):
                            ['13', '2'], ['23','4'], ['24','3'], ['123','4'], ['124','3'], ['134','2'], ['234','1']]
     return all_comparisons
 
+def all_partitions(elements):
+    """Generate all partitions of a set into two non-empty subsets, as tuples."""
+    s = list(elements)
+    for size in range(1, len(s)):
+        for combo in combinations(s, size):
+            yield tuple(combo), tuple(x for x in s if x not in combo)
+
+def all_nested_dichotomies(elements):
+    """
+    Generate all nested dichotomies for a set of elements.
+    Returns a list of dichotomies as tuples of hierarchical splits.
+    """
+    if len(elements) <= 1:
+        yield ()
+        return
+    
+    for part1, part2 in all_partitions(elements):
+        for sub1 in all_nested_dichotomies(part1):
+            for sub2 in all_nested_dichotomies(part2):
+                yield ((part1, part2),) + sub1 + sub2
+
+
 def defined_all_trees(n: int):
     """
     TODO remove this method and use something more rigourous. This function creates a list of all trees or combined models for a given 
@@ -998,7 +1020,7 @@ def defined_all_trees(n: int):
     output:
         list of all trees
     """
-    categories = tuple(range(1, n+1))
+    categories = tuple(range(0, n))
     all_trees_normalized = generate_normalized_branches(categories)
 
     # Convert frozensets back to lists for readability
@@ -1062,6 +1084,30 @@ def one_hot_encode(df, column):
     df_encoded = pd.concat([df, dummies], axis=1)
     df_encoded.drop(columns=[column], inplace=True)
     return df_encoded
+
+def build_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None, transform_label = None):
+    # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
+    if not built_mods:
+        built_mods = build_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
+    test_single_models(built_mods, X_test)
+    built_mods = list(built_mods.values())
+    tree_model = mod.tree_model('tree_mod1', built_mods, best_tree)
+    output = tree_model.predict(X_test)
+    tree_model.model_score(y_test.tolist())
+
+    return tree_model, y_test.tolist(), output['y_pred'].to_list()
+
+def kfold_build_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None, transform_label = None):
+    # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
+    if not built_mods:
+        built_mods = kfold_return_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
+    test_single_models(built_mods, X_test)
+    built_mods = list(built_mods.values())
+    tree_model = mod.tree_model('tree_mod1', built_mods, best_tree)
+    output = tree_model.predict(X_test)
+    tree_model.model_score(y_test.tolist())
+
+    return tree_model, y_test.tolist(), output['y_pred'].to_list()
     
 def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None, transform_label = None):
     # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
@@ -1139,15 +1185,12 @@ def all_trees_map_categorical_target(config, df):
         the labelEconder if a transform was performed, None otherwise
     """ 
     pre_transform_categories = tuple(df['Y'].unique())
-    all_integers = all(isinstance(x, int) or str(x).isdigit() for x in pre_transform_categories)
-    if not all_integers:
-        transform_label = LabelEncoder()
-        config.log.info("Types are categorical so need to map them to integers.")
-        pre_transform_categories = tuple(df['Y'].unique())
-        df['Y'] = transform_label.fit_transform(df['Y']) + 1
-        mapped_categories = dict(zip(pre_transform_categories, transform_label.transform(pre_transform_categories)))
-        config.log.info(f"mapped categories: {mapped_categories}")
-        config.log.info(f"due to running all trees have moved the transform up 1 and can no longer map back.")
-        return None
-    else:
-        return None
+    # all_integers = all(isinstance(x, int) or str(x).isdigit() for x in pre_transform_categories)
+    # if not all_integers:
+    transform_label = LabelEncoder()
+    config.log.info("For trees need to map categories.")
+    pre_transform_categories = tuple(df['Y'].unique())
+    df['Y'] = transform_label.fit_transform(df['Y']) 
+    mapped_categories = dict(zip(pre_transform_categories, transform_label.transform(pre_transform_categories)))
+    config.log.info(f"mapped categories: {mapped_categories}")
+    # config.log.info(f"due to running all trees have moved the transform up 1 and can no longer map back.")
