@@ -783,7 +783,7 @@ def stepwise_tree(categories, X1_train, X1_test, total_tree):
 
 def split_data_set(categories, data):
     cut_data_set = data.loc[data['Y'].isin(categories)]
-    X_train, X_test, y_train, y_test = train_test_split(cut_data_set, cut_data_set['Y'], test_size=0.1, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(cut_data_set, cut_data_set['Y'], stratify=cut_data_set['Y'], test_size=0.3, random_state=42)
     return (X_train, X_test)
 
 def to_labels(probs: np.ndarray, threshold: float) -> np.ndarray:
