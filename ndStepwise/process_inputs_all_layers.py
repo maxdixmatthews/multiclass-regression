@@ -50,6 +50,6 @@ def run_all(input_file, output_file):
 
 if __name__ == "__main__":
     # Replace 'inputs.txt' and 'outputs.txt' with your actual file paths
-    input_file = 'multi_runs/inputs.txt'
-    output_file = 'multi_runs/outputs.txt'
+    input_file = 'multi_runs/inputs_all_layers.txt'
+    output_file = 'multi_runs/outputs_all_layers.txt'
     run_all(input_file, output_file)
