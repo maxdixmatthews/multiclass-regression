@@ -83,8 +83,8 @@ def main(filename, model_types):
         tree_types = list(best_tree.values())
         config.log.info(model_strucs)
         config.log.info(tree_types)
-
-        best_trained_model = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories, transform_label=transform_label)[0]
+        # kfold_build_best_tree()
+        best_trained_model = mf.kfold_build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories, transform_label=transform_label)[0]
         mf.graph_model(config, best_trained_model, f"inner_kfolds_fold{fold+1}_" + filename, transform_label=transform_label, model_types=model_types)
         config.log.info(f'Fold {fold+1}: {best_trained_model.score}')
         all_fold_score.append(best_trained_model.score)
