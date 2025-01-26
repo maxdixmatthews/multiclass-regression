@@ -6,3 +6,4 @@
 #knnhyper
 #letter_recognition
 #all models
+filename=car_evaluation.csv|model_types=LogisticRegression

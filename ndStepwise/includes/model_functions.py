@@ -141,12 +141,11 @@ def test_single_models(models: list, x_test_data):
     tested_models = dict()
     for key in models:
         model = models[key]
-        print(key)
         model.predict_individual(x_test_data)
         tested_models[key] = model.model_score()
     return tested_models
 
-def find_best_mod_given_categories(categories, all_model_struc, X1_train, X1_test):
+def find_best_mod_given_categories(config, categories, all_model_struc, X1_train, X1_test):
     """
     Finds the split of a model that has the highest accuracy/f1/metric
     input:
@@ -162,10 +161,18 @@ def find_best_mod_given_categories(categories, all_model_struc, X1_train, X1_tes
     all_layer_models = build_single_models(config, layered_models, X1_train)
 
     scores_2_r = test_single_models(all_layer_models, X1_test)
-    highest_model = all_layer_models[max(scores_2_r, key=scores_2_r.get)] 
+    highest_model = all_layer_models[max(scores_2_r, key=scores_2_r.get)]
     return highest_model
 
-def build_tree_layer_by_layer(categories, all_model_struc, X1_train, X1_test, total_tree):
+def split_into_two_tuples(lst):
+    n = len(lst)
+    for r in range(1, n):  # Ensure both parts are non-empty
+        for subset in combinations(lst, r):
+            left = subset
+            right = tuple(x for x in lst if x not in subset)
+            yield left, right
+
+def build_tree_layer_by_layer(config, categories, X1_train, X1_test, total_tree, model_types, score_type='accuracy'):
     """
     Build this tree in a recursive way
     input:
@@ -177,16 +184,51 @@ def build_tree_layer_by_layer(categories, all_model_struc, X1_train, X1_test, to
     output:
         list of binary comparisons
     """
-    if len(categories) < 2:
-        return total_tree
-    
-    highest_model = find_best_mod_given_categories(categories, all_model_struc, X1_train, X1_test)
-    total_tree.append(highest_model)
+    print(f"Categories are {categories}")
+    X_train, X_test = split_data_set(categories, X1_train)
+    top_accuracy = 0
+    highest_model = None
+    highest_model_type = None
 
-    total1 = build_tree_layer_by_layer(highest_model.type_0_categories, all_model_struc, X1_train, X1_test, total_tree)
-    total2 = build_tree_layer_by_layer(highest_model.type_1_categories, all_model_struc, X1_train, X1_test, total1+total_tree)
+    if len(categories) <= 2:
+        if len(categories) == 2:
+            two_cat_mod = ((categories[0],), (categories[1],))
+            top_score = 0
+            top_model = 0
+            for mod_type in model_types:
+                new_mod = build_single_models(config, [two_cat_mod], X_train, score_type=score_type, train_type=mod_type)
+                tested_mods = test_single_models(new_mod, X_test)
+                sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
+                score = sorted_d_desc[0][1]
+                if score > top_score:
+                    top_score = score
+                    top_model_type = mod_type
+            total_tree[two_cat_mod] = top_model_type
+            config.log.info(f'All layer search found best split: {two_cat_mod} with mod type {top_model_type}')
+            return total_tree
+        else:
+            return total_tree
+    fresh_splitter = split_into_two_tuples(categories)
+    for left, right in fresh_splitter:
+        for mod_type in model_types:
+            all_layer_models = build_single_models(config, [(left, right)], X_train, score_type=score_type, train_type=mod_type)
+            scores = test_single_models(all_layer_models, X_test)
+            current_acc = scores[max(scores, key=scores.get)]
+            if current_acc > top_accuracy:
+                top_accuracy = current_acc
+                highest_model = (right, left)
+                highest_model_type = mod_type
+    config.log.info(f'All layer search found best split: {highest_model} with mod type {highest_model_type}')
+    # print(f"left {left}")
+    # print(f"right {right}")
+    total_tree[highest_model] = highest_model_type
+    # highest_model = find_best_mod_given_categories(config, categories, all_model_struc, X1_train, X1_test)
+    # total_tree.append(highest_model)
 
-    return list(set(total_tree + total2))
+    total1 = build_tree_layer_by_layer(config, tuple(highest_model[0]), X1_train, X1_test, total_tree, model_types)
+    total2 = build_tree_layer_by_layer(config, tuple(highest_model[1]), X1_train, X1_test, total1, model_types)
+
+    return total2
 
 def get_iterations_num(cat_num:int):
     """

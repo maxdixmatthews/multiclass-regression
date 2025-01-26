@@ -5,3 +5,4 @@
 #xgboostgpu
 #knnhyper
 #letter_recognition
+filename=car_evaluation.csv|model_types=LogisticRegression

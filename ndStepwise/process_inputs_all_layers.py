@@ -1,7 +1,5 @@
 import os
-from run_all_possible_trees import main
-import cProfile
-import pstats
+from run_datasets_tree_by_layer import main
 
 # Define the function you want to call
 def process_function(input_data):
@@ -36,8 +34,6 @@ def run_all(input_file, output_file):
     # Get the inputs that are not already processed
     remaining_inputs = ordered_difference(inputs, outputs)
 
-    remaining_inputs = [remaining_inputs[0]]
-
     for input_data in remaining_inputs:
         if input_data == '' or '#' in input_data:
             print(input_data)
@@ -47,19 +43,13 @@ def run_all(input_file, output_file):
         
         # Append the processed result to the output file
         filename, model_types = input_data.split('|')
-        profiler = cProfile.Profile()
-        profiler.enable()
+
         main(filename.split("=")[1], model_types.split("=")[1].split(","))
         append_to_file(output_file, input_data)
-        profiler.disable()
-
-    # Print the profiling results
-        stats = pstats.Stats(profiler)
-        stats.sort_stats('cumulative').print_stats(30)
         # return
 
 if __name__ == "__main__":
     # Replace 'inputs.txt' and 'outputs.txt' with your actual file paths
-    input_file = 'multi_runs/inputs_all_trees.txt'
-    output_file = 'multi_runs/outputs_all_trees.txt'
+    input_file = 'multi_runs/inputs.txt'
+    output_file = 'multi_runs/outputs.txt'
     run_all(input_file, output_file)
