@@ -184,7 +184,6 @@ def build_tree_layer_by_layer(config, categories, X1_train, X1_test, total_tree,
     output:
         list of binary comparisons
     """
-    print(f"Categories are {categories}")
     X_train, X_test = split_data_set(categories, X1_train)
     top_accuracy = 0
     highest_model = None
