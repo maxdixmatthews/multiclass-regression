@@ -1,6 +1,7 @@
 from joblib import dump, load
 import pandas as pd
 import ndStepwise.includes.model as mod
+import includes.model as mod
 from itertools import combinations
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, roc_curve, f1_score, precision_recall_curve, classification_report
@@ -140,6 +141,7 @@ def test_single_models(models: list, x_test_data):
     tested_models = dict()
     for key in models:
         model = models[key]
+        print(key)
         model.predict_individual(x_test_data)
         tested_models[key] = model.model_score()
     return tested_models
@@ -1136,7 +1138,8 @@ def kfold_build_best_tree(config, X_test, X_train, y_test, score_type, tree_type
     # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
     if not built_mods:
         built_mods = kfold_return_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
-    # test_single_models(built_mods, X_test)
+        print(built_mods)
+    test_single_models(built_mods, X_test)
     built_mods = list(built_mods.values())
     config.log.info(f'Best models are {built_mods}')
     tree_model = mod.tree_model('tree_mod1', built_mods, best_tree)

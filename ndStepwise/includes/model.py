@@ -86,7 +86,8 @@ class single_model(model):
         #Select model
         if model_type.lower() == 'logisticregression':
             model = make_pipeline(
-                StandardScaler(), LogisticRegression(solver='lbfgs', max_iter=4000))
+                StandardScaler(),
+                LogisticRegression(solver='lbfgs', max_iter=4000))
             # Find Cutoff using Youden's J statistic
             # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
             # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
@@ -245,14 +246,16 @@ class single_model(model):
             try:
                 self.cutoff, model_score = mf.kfold_find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type, skip_cutoff=skip_cutoff)
                 self.score = model_score
+                model.fit(train_df.drop([response_col,self.name], axis=1), Y)
                 self.fitted_model = model
-                return self.score
+                # print(f"Trained model score {model_score}")
+                return model_score
             except Exception as e:
                 print(f'Failed to find cutoff due to {e}')
                 raise e
                 self.cutoff = None
         else:
-            return self.score
+            return model
 
         kf = KFold(n_splits=5, shuffle=True, random_state=42)
         cross_val_scores = cross_val_score(model, train_df.drop([response_col,self.name], axis=1), Y, cv=kf)
@@ -456,7 +459,6 @@ class single_model(model):
         # df = train_df
         if self.fitted_model == None:
             raise Exception('Must train model on data before it can be tested.')
-
         if self.cutoff is not None:
             y_pred = self.fitted_model.predict_proba(df.drop(['key',response_col], axis=1))[:, 1]
             new_pred = np.where(y_pred > self.cutoff, 1, 0)
