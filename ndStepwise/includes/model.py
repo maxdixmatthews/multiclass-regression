@@ -16,6 +16,7 @@ from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
+from sklearn.neural_network import MLPClassifier
 
 class model(ABC):
     def __init__(self, model_name):
@@ -414,6 +415,8 @@ class single_model(model):
             skip_cutoff = True
             self.score = model.best_score_
             self.fitted_model = model
+        elif model_type.lower() == 'mlp':
+            model = make_pipeline(StandardScaler(), MLPClassifier(max_iter = 400))
             
         else:
             print(f"nothing found for {model_type.lower()}")
