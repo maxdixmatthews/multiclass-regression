@@ -37,11 +37,12 @@ def run_all(input_file, output_file):
         # Get the inputs that are not already processed
         remaining_inputs = ordered_difference(inputs, outputs)
 
-        remaining_inputs = [remaining_inputs[0]]
-
         if len(remaining_inputs) == 0:
             print("Finished all inputs")
             break
+
+        remaining_inputs = [remaining_inputs[0]]
+
 
         for input_data in remaining_inputs:
             if input_data == '' or '#' in input_data:
@@ -61,6 +62,7 @@ def run_all(input_file, output_file):
         # Print the profiling results
             stats = pstats.Stats(profiler)
             stats.sort_stats('cumulative').print_stats(30)
+            print(stats)
         # return
 
 if __name__ == "__main__":

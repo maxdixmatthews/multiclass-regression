@@ -994,8 +994,16 @@ def graph_model(config, tree_model, filename, transform_label = None, model_type
     G.add_edges_from(edges)
 
     # Draw the graph
-    pos = nx.spring_layout(G)  # positions for all nodes
-    pos = graphviz_layout(G, prog="dot")
+
+    try:
+        pos = nx.spring_layout(G)  # positions for all nodes
+        pos = graphviz_layout(G, prog="dot")
+    except IndexError:
+        node_mapping = {node: f"N{i}" for i, node in enumerate(G.nodes())}  # Map long names to N1, N2, etc.
+        G = nx.relabel_nodes(G, node_mapping)
+        pos = nx.spring_layout(G)  # positions for all nodes
+        pos = graphviz_layout(G, prog="dot")
+        
     plt.figure(figsize=(fig_width_inch, fig_height_inch))
     nx.draw(G, pos, with_labels=True, node_color='skyblue', node_size=400, edge_color='k', linewidths=1, font_size=7, arrows=True)
     # Custom step: Add node names above and additional information below the nodes

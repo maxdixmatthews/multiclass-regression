@@ -1,5 +1,7 @@
 import os
 from run_datasets_outter_kfolds import main
+import cProfile
+import pstats
 
 # Define the function you want to call
 def process_function(input_data):
@@ -28,25 +30,37 @@ def ordered_difference(list1, list2):
     return [item for item in list1 if item not in list2]
 def run_all(input_file, output_file):
     # Read the input and output files into sets
-    inputs = read_file_to_set(input_file)
-    outputs = read_file_to_set(output_file)
+    while(True):
+        inputs = read_file_to_set(input_file)
+        outputs = read_file_to_set(output_file)
 
-    # Get the inputs that are not already processed
-    remaining_inputs = ordered_difference(inputs, outputs)
+        # Get the inputs that are not already processed
+        remaining_inputs = ordered_difference(inputs, outputs)
+        if len(remaining_inputs) == 0:
+            print("Finished all inputs")
+            break
 
-    for input_data in remaining_inputs:
-        if input_data == '' or '#' in input_data:
-            print(input_data)
-            continue
-        # Call the function with the input data
-        # result = process_function(input_data)
-        
-        # Append the processed result to the output file
-        filename, model_types = input_data.split('|')
+        remaining_inputs = [remaining_inputs[0]]
 
-        main(filename.split("=")[1], model_types.split("=")[1].split(","))
-        append_to_file(output_file, input_data)
-        # return
+        for input_data in remaining_inputs:
+            if input_data == '' or '#' in input_data:
+                print(input_data)
+                continue
+            # Call the function with the input data
+            # result = process_function(input_data)
+            
+            # Append the processed result to the output file
+            filename, model_types = input_data.split('|')
+            profiler = cProfile.Profile()
+            profiler.enable()
+            main(filename.split("=")[1], model_types.split("=")[1].split(","))
+            append_to_file(output_file, input_data)
+            profiler.disable()
+
+        # Print the profiling results
+            stats = pstats.Stats(profiler)
+            stats.sort_stats('cumulative').print_stats(30)
+            print(stats)
 
 if __name__ == "__main__":
     # Replace 'inputs.txt' and 'outputs.txt' with your actual file paths
