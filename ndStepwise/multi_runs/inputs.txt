@@ -1,3 +1,4 @@
+
 #Logistic Regression Only
 filename=car_evaluation.csv|model_types=LogisticRegression
 filename=mfeat-factors.csv|model_types=LogisticRegression
@@ -13,6 +14,7 @@ filename=satimage.csv|model_types=LogisticRegression
 filename=image_segment.csv|model_types=LogisticRegression
 filename=beans_data.csv|model_types=LogisticRegression
 
+filename=rt_iot.csv|model_types=logisticregression
 #All of the others
 filename=car_evaluation.csv|model_types=logisticregression,xgboostgpu,svm,knnhyper
 filename=mfeat-factors.csv|model_types=logisticregression,xgboostgpu,svm,knnhyper

@@ -26,6 +26,7 @@ from datetime import datetime
 import os
 import argparse
 from sklearn.model_selection import cross_val_score, StratifiedKFold
+import logging
 
 def main(filename, model_types):
     # config.log.info('Max Rocks')
@@ -71,7 +72,6 @@ def main(filename, model_types):
         X_train, X_test = df.iloc[train_index], df.iloc[test_index]
         y_train, y_test = df['Y'].iloc[train_index], df['Y'].iloc[test_index]
         print(f"Fold {fold+1}")
-    
         config.log.info(f'Beginning of fold {fold+1}  of {dataset}.')
         dataset_location = "data/" + dataset
         score_type = 'accuracy'
@@ -98,6 +98,8 @@ def main(filename, model_types):
     for handler in config.log.handlers:
         handler.close()
         config.log.removeHandler(handler)
+    logging.getLogger().handlers.clear()
+    config.log = None
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('-f', '--filename', required=True, type=str, help='The name of the file to process')

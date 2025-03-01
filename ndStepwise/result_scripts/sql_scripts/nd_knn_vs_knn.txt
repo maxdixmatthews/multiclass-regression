@@ -1,0 +1,55 @@
+WITH best_nd_model AS (
+	SELECT 
+		'nd' as who_ran,
+		dataset,
+		name AS name,
+		model AS models,
+		MAX(average_accuracy) AS accuracy
+	FROM average_per_dataset
+	WHERE 
+		comp_type = 'mine' 
+		and model = 'knnhyper'
+	GROUP BY dataset
+),
+competitors AS (
+	SELECT 
+		'competitor' as who_ran,
+		dataset,
+		name AS name,
+		model AS models,
+		average_accuracy AS accuracy
+	FROM average_per_dataset
+    WHERE comp_type = 'comp'
+    AND model LIKE 'KNN%'
+),
+all_together_now AS (
+	SELECT
+		*
+	FROM 
+		best_nd_model nd
+	UNION ALL
+	SELECT 
+		* 
+	FROM competitors
+),
+all_with_rank AS (
+	SELECT 
+		who_ran,
+		dataset,
+		name,
+		models,
+		accuracy,
+		RANK() OVER (PARTITION BY dataset ORDER BY accuracy DESC) AS rank
+	FROM 
+		all_together_now
+)
+SELECT 
+	dataset,
+	rank,
+	name,
+	models,
+	accuracy
+FROM 
+	all_with_rank
+WHERE 
+	who_ran = 'nd'

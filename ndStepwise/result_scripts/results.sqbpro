@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="results.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="1"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="6134"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="best_average_model" custom_title="0" dock_id="1" table="4,18:mainbest_average_model"/><dock_state state="000000ff00000000fd00000001000000020000045900000341fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000000004590000011e00ffffff000002af0000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="aggregate_view" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="530"/><column index="2" value="300"/><column index="3" value="156"/><column index="4" value="36"/><column index="5" value="300"/><column index="6" value="300"/><column index="7" value="140"/><column index="8" value="111"/><column index="9" value="78"/><column index="10" value="156"/><column index="11" value="300"/><column index="12" value="300"/><column index="13" value="300"/><column index="14" value="230"/><column index="15" value="217"/><column index="16" value="300"/><column index="17" value="300"/><column index="18" value="274"/><column index="19" value="291"/><column index="20" value="258"/><column index="21" value="274"/><column index="22" value="300"/><column index="23" value="185"/><column index="24" value="194"/><column index="25" value="196"/><column index="26" value="182"/><column index="27" value="226"/><column index="28" value="246"/><column index="29" value="240"/><column index="30" value="257"/><column index="31" value="224"/><column index="32" value="240"/><column index="33" value="185"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="all_trees_model_registry" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="39"/><column index="2" value="48"/><column index="3" value="50"/><column index="4" value="36"/><column index="5" value="80"/><column index="7" value="94"/><column index="8" value="111"/><column index="9" value="93"/><column index="10" value="39"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="average_competitor_scores" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="425"/><column index="2" value="156"/><column index="3" value="140"/><column index="4" value="144"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="average_per_dataset" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="5" mode="1"/></sort><column_widths><column index="1" value="568"/><column index="2" value="461"/><column index="3" value="156"/><column index="4" value="140"/><column index="5" value="110"/><column index="6" value="156"/></column_widths><filter_values><column index="1" value="multi"/></filter_values><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="best_average_model" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="2" mode="1"/></sort><column_widths><column index="1" value="688"/><column index="2" value="511"/><column index="3" value="156"/><column index="4" value="140"/><column index="5" value="70"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="best_competitor_score" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="365"/><column index="2" value="156"/><column index="3" value="93"/><column index="4" value="140"/><column index="5" value="111"/></column_widths><filter_values><column index="1" value="wi"/></filter_values><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="best_nd_accuracy" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="0" mode="1"/></sort><column_widths><column index="1" value="522"/><column index="2" value="502"/><column index="3" value="156"/><column index="4" value="36"/><column index="5" value="300"/><column index="6" value="639"/><column index="7" value="140"/><column index="8" value="111"/><column index="9" value="78"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="compare_all_accuracy" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="6" mode="1"/></sort><column_widths><column index="1" value="156"/><column index="2" value="36"/><column index="3" value="230"/><column index="4" value="176"/><column index="5" value="175"/><column index="6" value="632"/><column index="7" value="63"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="compare_stepwise_competitor_accuracy" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="6" mode="1"/></sort><column_widths><column index="1" value="156"/><column index="2" value="36"/><column index="3" value="171"/><column index="4" value="140"/><column index="5" value="140"/><column index="6" value="366"/><column index="7" value="63"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="competitor_model_registry" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="0" mode="0"/></sort><column_widths><column index="1" value="300"/><column index="2" value="171"/><column index="3" value="156"/><column index="4" value="36"/><column index="5" value="140"/><column index="6" value="111"/><column index="7" value="156"/><column index="8" value="39"/></column_widths><filter_values><column index="2" value="wine"/></filter_values><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="layer_by_layer_model_registry" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="1" mode="1"/></sort><column_widths><column index="1" value="618"/><column index="2" value="376"/><column index="3" value="117"/><column index="4" value="36"/><column index="5" value="902"/><column index="6" value="619"/><column index="7" value="140"/><column index="8" value="111"/><column index="9" value="156"/><column index="10" value="114"/></column_widths><filter_values><column index="1" value="mlp"/></filter_values><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="nd_model_registry" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="586"/><column index="2" value="300"/><column index="3" value="156"/><column index="4" value="36"/><column index="5" value="300"/><column index="6" value="300"/><column index="7" value="140"/><column index="8" value="111"/><column index="9" value="78"/><column index="10" value="156"/><column index="11" value="300"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1*">CREATE VIEW best_average_model AS
+SELECT
+	name,
+	model,
+	dataset,
+	MAX(average_accuracy) as best_accuracy,
+	comp_type
+FROM 
+	average_per_dataset
+GROUP BY dataset, comp_type
+ORDER BY dataset DESC</sql><sql name="SQL 3*">SELECT
+	name,
+	models,
+	dataset,
+	AVG(accuracy_score) as average_accuracy,
+	AVG(run_time_seconds) as average_run_time,
+	MAX(run_timestamp) as latest_time
+FROM 
+	all_trees_model_registry
+GROUP BY name, models, dataset;</sql><sql name="SQL 4*">DROP VIEW average_per_dataset;
+CREATE VIEW average_per_dataset AS
+SELECT
+	name,
+	model,
+	dataset,
+	AVG(accuracy) as average_accuracy,
+	AVG(run_time_seconds) as average_run_time,
+	MAX(run_timestamp) as latest_time,
+	&quot;comp&quot; as comp_type
+FROM 
+	competitor_model_registry
+GROUP BY name, model, dataset
+UNION ALL
+SELECT
+	name,
+	models,
+	dataset,
+	AVG(accuracy_score) as average_accuracy,
+	AVG(run_time_seconds) as average_run_time,
+	MAX(run_timestamp) as latest_time,
+	&quot;mine&quot; as comp_type
+FROM 
+	nd_model_registry
+GROUP BY name, models, dataset
+UNION ALL
+SELECT
+	name,
+	models,
+	dataset,
+	AVG(accuracy_score) as average_accuracy,
+	AVG(run_time_seconds) as average_run_time,
+	MAX(run_timestamp) as latest_time,
+	&quot;mine&quot; as comp_type
+FROM 
+	layer_by_layer_model_registry
+GROUP BY name, models, dataset
+UNION ALL
+SELECT
+	name,
+	models,
+	dataset,
+	AVG(accuracy_score) as average_accuracy,
+	AVG(run_time_seconds) as average_run_time,
+	MAX(run_timestamp) as latest_time,
+	&quot;mine&quot; as comp_type
+FROM 
+	all_trees_model_registry
+GROUP BY name, models, dataset</sql><sql name="SQL 5*">WITH top_nds as (
+	SELECT 
+		name,
+		models,
+		dataset,
+		kfold,
+		nd_structure,
+		model_structure,
+		MAX(accuracy_score) as best_accuracy,
+		run_time_seconds,
+		inner_kfolds
+	FROM
+		
+    WHERE name LIKE 'layer_by%'
+	GROUP BY dataset, kfold
+),
+best_comps as (
+	SELECT
+		model,
+		dataset,
+		kfold,
+		MAX(accuracy) as best_accuracy,
+		run_time_seconds
+	FROM 
+		competitor_model_registry
+	GROUP BY dataset, kfold
+)
+SELECT 
+	best_comps.dataset,
+	best_comps.kfold, 
+	best_comps.model as best_competitor, 
+	best_comps.best_accuracy as best_comp,
+	top_nds.best_accuracy as best_nd,
+	top_nds.name as best_nd,
+	CASE 
+		WHEN abs(top_nds.best_accuracy - best_comps.best_accuracy) &lt; 0.001 THEN 'DRAW'
+		WHEN top_nds.best_accuracy &gt; best_comps.best_accuracy THEN 'WE WON'
+		ELSE 'WE LOST'
+	END AS who_won
+FROM 
+	best_comps
+INNER JOIN top_nds ON 
+	best_comps.dataset = top_nds.dataset
+	AND best_comps.kfold = top_nds.kfold
+ORDER BY who_won DESC</sql><sql name="SQL 6*">DROP VIEW best_nd_accuracy;
+CREATE VIEW best_nd_accuracy as 
+SELECT name, models, dataset, kfold, nd_structure, model_structure, MAX(accuracy_score), run_time_seconds, inner_kfolds 
+FROM aggregate_view GROUP BY dataset, kfold</sql><sql name="SQL 7*">best_nd_accuracy</sql><sql name="SQL 9*">-- CREATE VIEW best_nd_model_rank AS
+WITH best_nd_model AS (
+    SELECT 
+		'nd' as who_ran,
+		dataset,
+		kfold,
+		name AS nd_name,
+		models AS nd_models,
+		accuracy_score AS nd_accuracy,
+    FROM nd_model_registry
+    WHERE name not like 'z'
+    AND (dataset, kfold, accuracy_score) IN (
+        SELECT dataset, kfold, MAX(accuracy_score)
+        FROM nd_model_registry
+        WHERE name not like 'z'
+        GROUP BY dataset, kfold
+    )
+),
+ranked_competitors AS (
+	SELECT 
+		bn.dataset,
+		bn.kfold,
+		bn.name AS nd_name,
+		bn.models AS nd_models,
+		bn.accuracy_score AS nd_accuracy,
+		rc.model AS competitor_model,
+		rc.accuracy AS competitor_accuracy,
+		RANK() OVER (PARTITION BY dataset, kfold ORDER BY accuracy DESC) AS rank
+	FROM best_nd_model bn
+	LEFT JOIN competitor_model_registry rc 
+	ON bn.dataset = rc.dataset AND bn.kfold = rc.kfold
+)</sql><sql name="SQL 10*">WITH best_nd_model AS (
+	SELECT 
+		'nd' as who_ran,
+		dataset,
+		name AS name,
+		model AS models,
+		MAX(average_accuracy) AS accuracy
+	FROM average_per_dataset
+	WHERE 
+		comp_type = 'mine' 
+		and model = 'svm'
+	GROUP BY dataset
+),
+competitors AS (
+	SELECT 
+		'competitor' as who_ran,
+		dataset,
+		name AS name,
+		model AS models,
+		average_accuracy AS accuracy
+	FROM average_per_dataset
+    WHERE comp_type = 'comp'
+	AND model LIKE 'SVM%'
+),
+all_together_now AS (
+	SELECT
+		*
+	FROM 
+		best_nd_model nd
+	UNION ALL
+	SELECT 
+		* 
+	FROM competitors
+),
+all_with_rank AS (
+	SELECT 
+		who_ran,
+		dataset,
+		name,
+		models,
+		accuracy,
+		RANK() OVER (PARTITION BY dataset ORDER BY accuracy DESC) AS rank
+	FROM 
+		all_together_now
+)
+SELECT 
+	dataset,
+	rank,
+	name,
+	models,
+	accuracy
+FROM 
+	all_with_rank
+WHERE 
+	who_ran = 'nd'
+ORDER BY rank asc</sql><sql name="SQL 11*">-- with in_between as (
+-- 	SELECT 
+-- 		dataset,
+-- 		average_accuracy
+-- 	FROM 
+-- 		average_per_dataset
+-- 	WHERE 
+-- 		model='logisticregression'
+-- )
+
+SELECT 
+	dataset,
+	MAX(average_accuracy)
+FROM 
+	average_per_dataset
+WHERE 
+	comp_type = 'mine' 
+	and model='logisticregression'
+GROUP BY dataset</sql><sql name="SQL 12*">WITH best_nd_model AS (
+	SELECT 
+		'nd' as who_ran,
+		dataset,
+		name AS name,
+		model AS models,
+		MAX(average_accuracy) AS accuracy
+	FROM average_per_dataset
+	WHERE 
+		comp_type = 'mine' 
+		and model = 'xgboostgpu'
+	GROUP BY dataset
+),
+competitors AS (
+	SELECT 
+		'competitor' as who_ran,
+		dataset,
+		name AS name,
+		model AS models,
+		average_accuracy AS accuracy
+	FROM average_per_dataset
+    WHERE comp_type = 'comp'
+	and model LIKE 'SVM%'
+),
+all_together_now AS (
+	SELECT
+		*
+	FROM 
+		best_nd_model nd
+	UNION ALL
+	SELECT 
+		* 
+	FROM competitors
+),
+all_with_rank AS (
+	SELECT 
+		who_ran,
+		dataset,
+		name,
+		models,
+		accuracy,
+		RANK() OVER (PARTITION BY dataset ORDER BY accuracy DESC) AS rank
+	FROM 
+		all_together_now
+)
+SELECT 
+	dataset,
+	rank,
+	name,
+	models,
+	accuracy
+FROM 
+	all_with_rank
+WHERE 
+	who_ran = 'nd'</sql><current_tab id="9"/></tab_sql></sqlb_project>

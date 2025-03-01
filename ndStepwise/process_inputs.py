@@ -36,6 +36,11 @@ def run_all(input_file, output_file):
 
         # Get the inputs that are not already processed
         remaining_inputs = ordered_difference(inputs, outputs)
+
+        for input_data in remaining_inputs:
+            if input_data == '' or '#' in input_data:
+                remaining_inputs.remove(input_data)
+
         if len(remaining_inputs) == 0:
             print("Finished all inputs")
             break
@@ -43,9 +48,6 @@ def run_all(input_file, output_file):
         remaining_inputs = [remaining_inputs[0]]
 
         for input_data in remaining_inputs:
-            if input_data == '' or '#' in input_data:
-                print(input_data)
-                continue
             # Call the function with the input data
             # result = process_function(input_data)
             
