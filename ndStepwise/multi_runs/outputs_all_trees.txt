@@ -6,4 +6,7 @@
 #knnhyper
 #letter_recognition
 #all models
-filename=car_evaluation.csv|model_types=LogisticRegression
+filename=car_evaluation.csv|model_types=logisticregression
+filename=academic_dropout.csv|model_types=logisticregression
+filename=maternal_health_risk.csv|model_types=logisticregression
+filename=pageblocks.csv|model_types=logisticregression

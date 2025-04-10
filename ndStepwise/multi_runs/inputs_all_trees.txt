@@ -1,9 +1,22 @@
 #Logistic Regression Only
-filename=car_evaluation.csv|model_types=LogisticRegression
-filename=satimage.csv|model_types=LogisticRegression
-filename=image_segment.csv|model_types=LogisticRegression
-filename=beans_data.csv|model_types=LogisticRegression
-filename=pageblocks.csv|model_types=LogisticRegression
+filename=car_evaluation.csv|model_types=logisticregression
+filename=academic_dropout.csv|model_types=logisticregression
+filename=maternal_health_risk.csv|model_types=logisticregression 
+filename=pageblocks.csv|model_types=logisticregression
+filename=satimage.csv|model_types=logisticregression
+filename=image_segment.csv|model_types=logisticregression
+filename=land_mines.csv|model_types=logisticregression
+filename=beans_data.csv|model_types=logisticregression
+filename=wine_quality.csv|model_types=logisticregression
+filename=mfeat-factors.csv|model_types=logisticregression
+filename=mfeat-fouriers.csv|model_types=logisticregression
+filename=mfeat-karhunen.csv|model_types=logisticregression
+filename=mfeat-morphological.csv|model_types=logisticregression
+filename=mfeat-pixel.csv|model_types=logisticregression
+filename=mfeat-zernlike.csv|model_types=logisticregression
+filename=optdigits.csv|model_types=logisticregression
+filename=handwritten_digits.csv|model_types=logisticregression
+filename=rt_iot.csv|model_types=logisticregression
 
 #all models
 filename=car_evaluation.csv|model_types=logisticregression,xgboostgpu,svm,knnhyper

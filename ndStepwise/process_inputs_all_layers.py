@@ -55,7 +55,10 @@ def run_all(input_file, output_file):
             filename, model_types = input_data.split('|')
             profiler = cProfile.Profile()
             profiler.enable()
-            main(filename.split("=")[1], model_types.split("=")[1].split(","))
+            try:
+                main(filename.split("=")[1], model_types.split("=")[1].split(","))
+            except Exception as e:
+                print(f"Error processing {input_data}: {e}")
             append_to_file(output_file, input_data)
             profiler.disable()
 

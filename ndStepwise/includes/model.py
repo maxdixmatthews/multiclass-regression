@@ -11,12 +11,13 @@ from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
-import ndStepwise.includes.model_functions as mf
+import includes.model_functions as mf
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
 from sklearn.neural_network import MLPClassifier
+import warnings
 
 class model(ABC):
     def __init__(self, model_name):
@@ -103,7 +104,7 @@ class single_model(model):
                 SelectFromModel(Lasso()),
                 LogisticRegression(solver='lbfgs', max_iter=4000))
             param_grid = {
-                'selectfrommodel__estimator__alpha': [0.01, 0.1],
+                'selectfrommodel__estimator__alpha': [0.000001, 0.1],
                 'logisticregression__C': [0.01, 0.1, 1]
             }
 
@@ -298,17 +299,34 @@ class single_model(model):
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
         elif model_type.lower() == 'logisticregressionlasso':
+
+            warnings.filterwarnings("ignore", module=r"^sklearn\.")
+            # warnings.filterwarnings("ignore", module=r"^pandas\core\dtypes\.")
             model = make_pipeline(
-                StandardScaler(), 
-                SelectFromModel(LassoCV(cv=3)), 
-                LogisticRegression(solver='lbfgs', max_iter=2000, C=0.1))
+                StandardScaler(),
+                SelectFromModel(Lasso()),
+                LogisticRegression(solver='lbfgs', max_iter=4000))
+            param_grid = {
+                'selectfrommodel__estimator__alpha': [0, 0.001, 0.1],
+                'selectfrommodel__threshold': [0.0, 'mean'],
+                'logisticregression__C': [0.01, 0.1, 1]
+            }
+
+            model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
+            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            skip_cutoff = True
+            self.score = model.best_score_
+            self.fitted_model = model   
+            # warnings.resetwarnings()
             # skip_cutoff = True
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'logisticregressionridge':
+            warnings.filterwarnings("ignore", module=r"^sklearn\.")
+            warnings.filterwarnings("ignore", module=r"^pandas\.")
             model = make_pipeline(
                 StandardScaler(), 
                 SelectFromModel(RidgeCV(cv=3)), 
-                LogisticRegression(solver='lbfgs', max_iter=2000))
+                LogisticRegression(solver='lbfgs', max_iter=4000))
             
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'xgboost':

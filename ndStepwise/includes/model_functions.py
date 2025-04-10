@@ -1,6 +1,6 @@
 from joblib import dump, load
 import pandas as pd
-import ndStepwise.includes.model as mod
+import includes.model as mod
 import includes.model as mod
 from itertools import combinations
 from sklearn.model_selection import train_test_split

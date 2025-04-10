@@ -1,4 +1,4 @@
-from ndStepwise.includes.logging import setup_logger
+from includes.logging import setup_logger
 import atexit
 class Config:
     def __init__(self, dataset):

@@ -99,7 +99,7 @@ def main(filename, model_types):
         handler.close()
         config.log.removeHandler(handler)
     logging.getLogger().handlers.clear()
-    config.log = None
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('-f', '--filename', required=True, type=str, help='The name of the file to process')

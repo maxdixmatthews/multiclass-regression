@@ -8,11 +8,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, roc_curve, ConfusionMatrixDisplay, auc, roc_auc_score, f1_score
 from sklearn import datasets
 from statistics import mean
-from ndStepwise.includes import model as mod
+from includes import model as mod
 import pandas as pd
 from joblib import dump, load
-from ndStepwise.includes.config import Config
-from ndStepwise.includes import model_functions as mf
+from includes.config import Config
+from includes import model_functions as mf
 import time
 from itertools import combinations
 import random

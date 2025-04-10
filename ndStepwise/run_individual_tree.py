@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 import pandas as pd
-from ndStepwise.includes.config import Config
-from ndStepwise.includes import model_functions as mf
+from includes.config import Config
+from includes import model_functions as mf
 import time
 import argparse
 import ast
