@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod, abstractproperty
 import pandas as pd
-from sklearn.linear_model import LogisticRegression, LassoCV, RidgeCV, Lasso
+from sklearn.linear_model import ElasticNet, LogisticRegression, LassoCV, RidgeCV, Lasso, Ridge
 from sklearn.metrics import accuracy_score, roc_curve, f1_score, roc_auc_score, confusion_matrix
 from sklearn.model_selection import cross_val_predict, cross_val_score
 import xgboost as xgb
@@ -318,17 +318,47 @@ class single_model(model):
             self.score = model.best_score_
             self.fitted_model = model   
             # warnings.resetwarnings()
-            # skip_cutoff = True
-            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+
         elif model_type.lower() == 'logisticregressionridge':
             warnings.filterwarnings("ignore", module=r"^sklearn\.")
             warnings.filterwarnings("ignore", module=r"^pandas\.")
             model = make_pipeline(
-                StandardScaler(), 
-                SelectFromModel(RidgeCV(cv=3)), 
-                LogisticRegression(solver='lbfgs', max_iter=4000))
-            
-            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+                StandardScaler(),
+                SelectFromModel(Ridge(max_iter=10000)),
+                LogisticRegression(solver='lbfgs', max_iter=4000)
+            )
+            param_grid = {
+                'selectfrommodel__estimator__alpha': [0, 0.001, 0.1],
+                'selectfrommodel__threshold': [0.0, 'mean'],
+                'logisticregression__C': [0.01, 0.1, 1]
+            }
+
+            model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
+            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            skip_cutoff = True
+            self.score = model.best_score_
+            self.fitted_model = model   
+
+        elif model_type.lower() == 'logisticregressionelasticnet':
+            warnings.filterwarnings("ignore", module=r"^sklearn\.")
+            warnings.filterwarnings("ignore", module=r"^pandas\.")
+            model = make_pipeline(
+                StandardScaler(),
+                SelectFromModel(ElasticNet(max_iter=10000)),  # Setting a higher max_iter to ensure convergence
+                LogisticRegression(solver='lbfgs', max_iter=4000)
+            )
+            param_grid = {
+                'selectfrommodel__estimator__alpha': [0, 0.01, 0.1],  
+                'selectfrommodel__estimator__l1_ratio': [0.5],       
+                'selectfrommodel__threshold': [0.0, 'mean'],                 
+                'logisticregression__C': [0.1, 1]                    
+            }
+            model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
+            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            skip_cutoff = True
+            self.score = model.best_score_
+            self.fitted_model = model  
+
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)

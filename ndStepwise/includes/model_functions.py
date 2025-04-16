@@ -4,7 +4,9 @@ import includes.model as mod
 import includes.model as mod
 from itertools import combinations
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, roc_curve, f1_score, precision_recall_curve, classification_report
+from sklearn.metrics import (accuracy_score, roc_curve, precision_recall_curve, classification_report, confusion_matrix, precision_score, recall_score,
+                             f1_score, roc_auc_score, log_loss, balanced_accuracy_score,
+                             cohen_kappa_score, matthews_corrcoef, jaccard_score, hamming_loss)
 from sklearn.model_selection import cross_val_predict
 from sklearn import metrics
 import random 
@@ -19,6 +21,7 @@ import os
 from sklearn.preprocessing import LabelEncoder
 import multiprocessing
 from pathlib import Path
+import sqlalchemy as sa
 
 def read_arff(file_path, columns = None):
     with open(file_path, 'r') as file:
@@ -1246,3 +1249,91 @@ def all_trees_map_categorical_target(config, df):
     mapped_categories = dict(zip(pre_transform_categories, transform_label.transform(pre_transform_categories)))
     config.log.info(f"mapped categories: {mapped_categories}")
     # config.log.info(f"due to running all trees have moved the transform up 1 and can no longer map back.")
+
+def calculate_metrics(config, y_true, y_pred):
+    """
+    """
+    confusion_matrix_ls = str(confusion_matrix(y_true, y_pred))
+    accuracy = accuracy_score(y_true, y_pred)
+    precision_macro = precision_score(y_true, y_pred, average='macro')
+    precision_micro = precision_score(y_true, y_pred, average='micro')
+    recall_macro = recall_score(y_true, y_pred, average='macro')
+    recall_micro = recall_score(y_true, y_pred, average='micro')
+    f1_macro = f1_score(y_true, y_pred, average='macro')
+    f1_micro = f1_score(y_true, y_pred, average='micro')
+    balanced_accuracy = balanced_accuracy_score(y_true, y_pred)
+    cohen_kappa = cohen_kappa_score(y_true, y_pred)
+    matthews_corr_coef = matthews_corrcoef(y_true, y_pred)
+    jaccard_macro = jaccard_score(y_true, y_pred, average='macro')
+    hamming_loss_db = hamming_loss(y_true, y_pred)
+    
+    metrics_dict = {
+        "accuracy":[accuracy],        
+        "precision_macro":[precision_macro], 
+        "precision_micro":[precision_micro], 
+        "recall_macro":[recall_macro], 
+        "recall_micro":[recall_micro], 
+        "f1_macro":[f1_macro], 
+        "f1_micro":[f1_micro], 
+        "balanced_accuracy":[balanced_accuracy], 
+        "cohen_kappa":[cohen_kappa], 
+        "matthews_corrcoef":[matthews_corr_coef], 
+        "jaccard_macro":[jaccard_macro], 
+        "hamming_loss":[hamming_loss_db], 
+        "confusion_matrix":[confusion_matrix_ls],
+    }
+    return pd.DataFrame(metrics_dict)
+
+def df_upsert_postgres(data_frame, table_name, engine, schema=None, match_columns=None, insert_only=False):
+    """
+    Perform an "upsert" on a PostgreSQL table from a DataFrame.
+    Constructs an INSERT … ON CONFLICT statement, uploads the DataFrame to a
+    temporary table, and then executes the INSERT.
+    Parameters
+    ----------
+    data_frame : pandas.DataFrame
+        The DataFrame to be upserted.
+    table_name : str
+        The name of the target table.
+    engine : sqlalchemy.engine.Engine
+        The SQLAlchemy Engine to use.
+    schema : str, optional
+        The name of the schema containing the target table.
+    match_columns : list of str, optional
+        A list of the column name(s) on which to match. If omitted, the
+        primary key columns of the target table will be used.
+    insert_only : bool, optional
+        On conflict do not update. (Default: False)
+    """
+    table_spec = ""
+    if schema:
+        table_spec += '"' + schema.replace('"', '""') + '".'
+    table_spec += '"' + table_name.replace('"', '""') + '"'
+
+    df_columns = list(data_frame.columns)
+    if not match_columns:
+        insp = sa.inspect(engine)
+        match_columns = insp.get_pk_constraint(table_name, schema=schema)[
+            "constrained_columns"
+        ]
+    columns_to_update = [col for col in df_columns if col not in match_columns]
+    insert_col_list = ", ".join([f'"{col_name}"' for col_name in df_columns])
+    stmt = f"INSERT INTO {table_spec} ({insert_col_list})\n"
+    stmt += f"SELECT {insert_col_list} FROM temp_table\n"
+    match_col_list = ", ".join([f'"{col}"' for col in match_columns])
+    stmt += f"ON CONFLICT ({match_col_list}) DO "
+    if insert_only:
+        stmt += "NOTHING"
+    else:
+        stmt += "UPDATE SET\n"
+        stmt += ", ".join(
+            [f'"{col}" = EXCLUDED."{col}"' for col in columns_to_update]
+        )
+
+    with engine.begin() as conn:
+        conn.exec_driver_sql("DROP TABLE IF EXISTS temp_table")
+        conn.exec_driver_sql(
+            f"CREATE TEMPORARY TABLE temp_table AS SELECT * FROM {table_spec} WHERE false"
+        )
+        data_frame.to_sql("temp_table", conn, if_exists="append", index=False)
+        conn.exec_driver_sql(stmt)
