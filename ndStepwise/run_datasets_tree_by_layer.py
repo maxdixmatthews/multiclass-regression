@@ -85,7 +85,7 @@ def run_layer_by_layer_nds(filename, model_types, kfold_seed):
         postgres_df["id"] = id
         postgres_df["name"] = dataset + "_" + underscored_model_types
         postgres_df["models"] = underscored_model_types
-        postgres_df["dataset"] = dataset
+        postgres_df["dataset"] = dataset[:-4]
         postgres_df["kfold"] = fold+1
         postgres_df["kfold_seed"] = kfold_seed
         postgres_df["nd_structure"] = str(model_strucs)
