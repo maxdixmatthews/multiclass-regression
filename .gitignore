@@ -8,6 +8,7 @@ __pycache__/
 *.csv
 *.tar
 *.whl
+mlflow_notebook.ipynb
 
 
 # Ignore all files in the models directory
@@ -20,3 +21,4 @@ __pycache__/
 /all_new_images/
 tests/
 /tests/*
+ndStepwise/mlruns/*
