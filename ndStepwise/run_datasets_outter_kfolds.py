@@ -65,6 +65,7 @@ def run_nd_stepwise(filename, model_types, kfold_seed):
     all_fold_score = {}
     all_fold_time = {}
     config = Config(dataset + "_" + "_".join(model_types))
+    config.set_do_not_save_models()
     underscored_model_types = "_".join(model_types)
     df = pd.read_csv(dataset_location)
     df.drop(df.columns[0], axis=1, inplace=True)
@@ -79,7 +80,6 @@ def run_nd_stepwise(filename, model_types, kfold_seed):
         config.log.info(f'Beginning of fold {fold+1}  of {dataset}.')
         dataset_location = "data/" + dataset
         score_type = 'accuracy'
-
         config.log.info('Beginning of stepwise tree finder.')
         best_tree = mf.stepwise_tree_finder(config, categories, X_train, [], {}, model_types=model_types, score_type=score_type)
         config.log.info('Finished stepwise tree finder.')
@@ -90,6 +90,7 @@ def run_nd_stepwise(filename, model_types, kfold_seed):
         tree_types = list(best_tree.values())
         config.log.info(model_strucs)
         config.log.info(tree_types)
+
         best_trained_model, y_true, y_pred = mf.build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, model_strucs, categories, transform_label=transform_label)
         # mf.graph_model(config, best_trained_model, f"kfold_{fold+1}" + filename, transform_label=transform_label, model_types=model_types)
 

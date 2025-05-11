@@ -1,11 +1,12 @@
 import os
-from run_datasets_tree_by_layer import run_layer_by_layer_nds
+from run_datasets_inner_kfolds import run_nd_stepwise_inner_kfold
 import cProfile
 import pstats
 import sqlalchemy as sa
-import pandas as pd
 from datetime import datetime
+import pandas as pd
 import io
+
 # Define the function you want to call
 def process_function(input_data):
     """
@@ -31,9 +32,10 @@ def ordered_difference(list1, list2):
     Returns the difference between list1 and list2, preserving the order of list1.
     """
     return [item for item in list1 if item not in list2]
+
 def run_all(input_file, output_file):
     # Read the input and output files into sets
-    traversal_type = "layer-by-layer"
+    traversal_type = "ND-Stepwise"
     while(True):
         inputs = read_file_to_set(input_file)
         outputs = read_file_to_set(output_file)
@@ -49,16 +51,14 @@ def run_all(input_file, output_file):
 
         remaining_inputs = [remaining_inputs[0]]
 
-        for input_data in remaining_inputs:
-            # Call the function with the input data
-            # result = process_function(input_data)
-            
+        for input_data in remaining_inputs:            
             # Append the processed result to the output file
-            filename, model_types, kfold_seed = input_data.split('|')
-            profiler = cProfile.Profile()
-            profiler.enable()
+
             try:
-                run_layer_by_layer_nds(filename.split("=")[1], model_types.split("=")[1].split(","), int(kfold_seed.split("=")[1]))
+                filename, model_types, kfold_seed = input_data.split('|')
+                profiler = cProfile.Profile()
+                profiler.enable()
+                run_nd_stepwise_inner_kfold(filename.split("=")[1], model_types.split("=")[1].split(","), int(kfold_seed.split("=")[1]))
                 profiler.disable()
                 stream = io.StringIO()
                 stats = pstats.Stats(profiler, stream=stream)
@@ -77,10 +77,14 @@ def run_all(input_file, output_file):
             except Exception as e:
                 print(f"Error processing {input_data}: {e}")
                 profiler.disable()
-            append_to_file(output_file, input_data)
+                append_to_file(output_file, input_data+"FAILURE-CHECK-NEEDED")
+            else:
+                append_to_file(output_file, input_data)
+        # Print the profiling results
+
 
 if __name__ == "__main__":
     # Replace 'inputs.txt' and 'outputs.txt' with your actual file paths
-    input_file = 'multi_runs/inputs_all_layers.txt'
-    output_file = 'multi_runs/outputs_all_layers.txt'
+    input_file = 'multi_runs/inputs_inner_kfolds.txt'
+    output_file = 'multi_runs/outputs_inner_kfolds.txt'
     run_all(input_file, output_file)

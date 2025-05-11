@@ -1,0 +1,47 @@
+#Start with my comments, then the models I've done
+#Logistic Regression Only
+
+#All of the others
+#xgboostgpu
+#knnhyper
+#letter_recognition
+#all models
+
+filename=academic_dropout.csv|model_types=logisticregression|kfold_seed=69
+filename=academic_dropout.csv|model_types=logisticregression|kfold_seed=68
+filename=academic_dropout.csv|model_types=logisticregression|kfold_seed=67
+filename=academic_dropout.csv|model_types=logisticregression|kfold_seed=66
+filename=academic_dropout.csv|model_types=logisticregression|kfold_seed=70
+filename=maternal_health_risk.csv|model_types=logisticregression|kfold_seed=69
+filename=maternal_health_risk.csv|model_types=logisticregression|kfold_seed=68
+filename=maternal_health_risk.csv|model_types=logisticregression|kfold_seed=67
+filename=maternal_health_risk.csv|model_types=logisticregression|kfold_seed=66
+filename=maternal_health_risk.csv|model_types=logisticregression|kfold_seed=70
+filename=car_evaluation.csv|model_types=logisticregression|kfold_seed=69
+filename=land_mines.csv|model_types=logisticregression|kfold_seed=69
+filename=car_evaluation.csv|model_types=logisticregression|kfold_seed=68
+filename=land_mines.csv|model_types=logisticregression|kfold_seed=68
+filename=car_evaluation.csv|model_types=logisticregression|kfold_seed=67
+filename=car_evaluation.csv|model_types=logisticregression|kfold_seed=66
+filename=car_evaluation.csv|model_types=logisticregression|kfold_seed=70
+filename=pageblocks.csv|model_types=logisticregression|kfold_seed=66
+filename=academic_dropout.csv|model_types=svm|kfold_seed=69
+filename=academic_dropout.csv|model_types=svm|kfold_seed=68
+filename=academic_dropout.csv|model_types=svm|kfold_seed=67
+filename=academic_dropout.csv|model_types=svm|kfold_seed=66
+filename=academic_dropout.csv|model_types=svm|kfold_seed=70
+filename=maternal_health_risk.csv|model_types=svm|kfold_seed=69
+filename=maternal_health_risk.csv|model_types=svm|kfold_seed=68
+filename=maternal_health_risk.csv|model_types=svm|kfold_seed=67
+filename=maternal_health_risk.csv|model_types=svm|kfold_seed=66
+filename=maternal_health_risk.csv|model_types=svm|kfold_seed=70
+filename=car_evaluation.csv|model_types=svm|kfold_seed=69
+filename=land_mines.csv|model_types=svm|kfold_seed=69
+filename=car_evaluation.csv|model_types=svm|kfold_seed=68
+filename=land_mines.csv|model_types=svm|kfold_seed=68
+filename=car_evaluation.csv|model_types=svm|kfold_seed=67
+filename=land_mines.csv|model_types=svm|kfold_seed=67
+filename=car_evaluation.csv|model_types=svm|kfold_seed=66
+filename=land_mines.csv|model_types=svm|kfold_seed=66
+filename=car_evaluation.csv|model_types=svm|kfold_seed=70
+filename=land_mines.csv|model_types=svm|kfold_seed=70

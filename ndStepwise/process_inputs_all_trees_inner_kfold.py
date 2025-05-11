@@ -1,11 +1,12 @@
 import os
-from run_datasets_tree_by_layer import run_layer_by_layer_nds
+from run_all_possible_trees_inner_kfold import run_all_trees
 import cProfile
 import pstats
 import sqlalchemy as sa
-import pandas as pd
 from datetime import datetime
+import pandas as pd
 import io
+
 # Define the function you want to call
 def process_function(input_data):
     """
@@ -33,7 +34,7 @@ def ordered_difference(list1, list2):
     return [item for item in list1 if item not in list2]
 def run_all(input_file, output_file):
     # Read the input and output files into sets
-    traversal_type = "layer-by-layer"
+    traversal_type = "all-trees"
     while(True):
         inputs = read_file_to_set(input_file)
         outputs = read_file_to_set(output_file)
@@ -41,13 +42,16 @@ def run_all(input_file, output_file):
         # Get the inputs that are not already processed
         remaining_inputs = ordered_difference(inputs, outputs)
 
-        remaining_inputs = [x for x in remaining_inputs if (x != '') and ('|' in x) and ('#' not in x) and ((x+"FAILURE-CHECK-NEEDED") not in outputs)]
+        for input_data in remaining_inputs:
+            if input_data == '' or '#' in input_data:
+                remaining_inputs.remove(input_data)
 
         if len(remaining_inputs) == 0:
             print("Finished all inputs")
             break
 
         remaining_inputs = [remaining_inputs[0]]
+
 
         for input_data in remaining_inputs:
             # Call the function with the input data
@@ -58,7 +62,7 @@ def run_all(input_file, output_file):
             profiler = cProfile.Profile()
             profiler.enable()
             try:
-                run_layer_by_layer_nds(filename.split("=")[1], model_types.split("=")[1].split(","), int(kfold_seed.split("=")[1]))
+                run_all_trees(filename.split("=")[1], model_types.split("=")[1].split(","), int(kfold_seed.split("=")[1]))
                 profiler.disable()
                 stream = io.StringIO()
                 stats = pstats.Stats(profiler, stream=stream)
@@ -76,11 +80,12 @@ def run_all(input_file, output_file):
                 df.to_sql('profiling_stats', engine, if_exists='append', index=False)
             except Exception as e:
                 print(f"Error processing {input_data}: {e}")
-                profiler.disable()
+                profiler.disable()        
             append_to_file(output_file, input_data)
+        # return
 
 if __name__ == "__main__":
     # Replace 'inputs.txt' and 'outputs.txt' with your actual file paths
-    input_file = 'multi_runs/inputs_all_layers.txt'
-    output_file = 'multi_runs/outputs_all_layers.txt'
+    input_file = 'multi_runs/inputs_all_trees_inner_kfold.txt'
+    output_file = 'multi_runs/outputs_all_trees_inner_kfold.txt'
     run_all(input_file, output_file)

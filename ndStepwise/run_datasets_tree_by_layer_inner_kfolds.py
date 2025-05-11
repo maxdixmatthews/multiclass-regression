@@ -29,7 +29,7 @@ from sklearn.model_selection import cross_val_score, StratifiedKFold
 import logging
 import sqlalchemy as sa
 
-def run_layer_by_layer_nds(filename, model_types, kfold_seed):
+def run_layer_by_layer_nds_inner_kfolds(filename, model_types, kfold_seed):
 
     print(filename)
     print(model_types)
@@ -63,7 +63,7 @@ def run_layer_by_layer_nds(filename, model_types, kfold_seed):
         score_type = 'accuracy'
 
         config.log.info('Beginning of layer by layer tree finder.')
-        best_tree = mf.build_tree_layer_by_layer(config, categories, X_train, [], {}, model_types=model_types, score_type=score_type)
+        best_tree = mf.kfold_build_tree_layer_by_layer(config, categories, X_train, [], {}, model_types=model_types, score_type=score_type)
 
         config.log.info('Finished layer by layer tree finderr.')
         fold_time = round(time.perf_counter()-start,3)
@@ -92,7 +92,7 @@ def run_layer_by_layer_nds(filename, model_types, kfold_seed):
         postgres_df["nd_structure"] = str(model_strucs)
         postgres_df["model_structure"] = str(tree_types)
         postgres_df["run_time_seconds"] = fold_time
-        postgres_df["inner_kfolds"] = 0
+        postgres_df["inner_kfolds"] = 1
         postgres_df["run_timestamp"] = run_timestamp
         postgres_df["nd_traversal_type"] = traversal_type
         postgres_df["notes"] = ""
@@ -116,4 +116,4 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--seed', default=69, type=int, help='The seed used for the outer kfolds')
     parser.add_argument('-m', '--model_types', type=str, nargs='*', default=['randomForest', 'LogisticRegression', 'xgboost'], help='An optional list models to be tested out of randomForest, LogisticRegression, xgboost, svm.')
     args = parser.parse_args()
-    run_layer_by_layer_nds(args.filename, args.model_types, args.seed)
+    run_layer_by_layer_nds_inner_kfolds(args.filename, args.model_types, args.seed)

@@ -70,6 +70,7 @@ def run_all_trees(filename, model_types, kfold_seed):
         y_full_train, y_full_test = df['Y'].iloc[train_index], df['Y'].iloc[test_index]
         print(f"Fold {fold+1}")
         X_train, X_test, y_train, y_test = train_test_split(X_full_train, X_full_train['Y'], stratify=X_full_train['Y'], test_size=0.3, random_state=42)
+        config.get_new_uuid()
         best_accuracy = 0
         best_model = ()
         best_types = []
@@ -83,7 +84,7 @@ def run_all_trees(filename, model_types, kfold_seed):
                 model_strucs = tree
                 
                 try:
-                    trained_model = mf.build_tree(config, X_test, X_train, y_test, score_type, list(tree_types), model_strucs, categories, transform_label=transform_label)[0]
+                    trained_model = mf.build_tree(config, X_test, X_train, y_test, score_type, list(tree_types), model_strucs, categories, transform_label=transform_label)
                 except Exception as e:
                     print("RED ALERT! RED ALERT!")
                     print(f"Failed at tree {tree}")
@@ -96,7 +97,7 @@ def run_all_trees(filename, model_types, kfold_seed):
                     config.log.info(f'current best accuracy is {trained_model.score}')
 
         config.log.info(f'Best model is {best_model}')
-
+        config.get_new_uuid()
         fold_time = round(time.perf_counter()-start,3)
         config.log.info(f"Fold {fold+1} took: {fold_time} to do find best tree.")
         all_fold_time[f"Fold {fold+1}"] = fold_time

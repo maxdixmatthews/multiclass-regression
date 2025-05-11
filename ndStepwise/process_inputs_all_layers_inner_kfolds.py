@@ -1,5 +1,5 @@
 import os
-from run_datasets_tree_by_layer import run_layer_by_layer_nds
+from run_datasets_tree_by_layer_inner_kfolds import run_layer_by_layer_nds_inner_kfolds
 import cProfile
 import pstats
 import sqlalchemy as sa
@@ -58,7 +58,7 @@ def run_all(input_file, output_file):
             profiler = cProfile.Profile()
             profiler.enable()
             try:
-                run_layer_by_layer_nds(filename.split("=")[1], model_types.split("=")[1].split(","), int(kfold_seed.split("=")[1]))
+                run_layer_by_layer_nds_inner_kfolds(filename.split("=")[1], model_types.split("=")[1].split(","), int(kfold_seed.split("=")[1]))
                 profiler.disable()
                 stream = io.StringIO()
                 stats = pstats.Stats(profiler, stream=stream)
@@ -81,6 +81,6 @@ def run_all(input_file, output_file):
 
 if __name__ == "__main__":
     # Replace 'inputs.txt' and 'outputs.txt' with your actual file paths
-    input_file = 'multi_runs/inputs_all_layers.txt'
-    output_file = 'multi_runs/outputs_all_layers.txt'
+    input_file = 'multi_runs/inputs_all_layers_inner_kfold.txt'
+    output_file = 'multi_runs/outputs_all_layers_inner_kfold.txt'
     run_all(input_file, output_file)

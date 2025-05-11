@@ -32,6 +32,7 @@ def ordered_difference(list1, list2):
     Returns the difference between list1 and list2, preserving the order of list1.
     """
     return [item for item in list1 if item not in list2]
+
 def run_all(input_file, output_file):
     # Read the input and output files into sets
     traversal_type = "ND-Stepwise"
@@ -42,9 +43,7 @@ def run_all(input_file, output_file):
         # Get the inputs that are not already processed
         remaining_inputs = ordered_difference(inputs, outputs)
 
-        for input_data in remaining_inputs:
-            if input_data == '' or '#' in input_data:
-                remaining_inputs.remove(input_data)
+        remaining_inputs = [x for x in remaining_inputs if (x != '') and ('|' in x) and ('#' not in x) and ((x+"FAILURE-CHECK-NEEDED") not in outputs)]
 
         if len(remaining_inputs) == 0:
             print("Finished all inputs")
@@ -52,15 +51,13 @@ def run_all(input_file, output_file):
 
         remaining_inputs = [remaining_inputs[0]]
 
-        for input_data in remaining_inputs:
-            # Call the function with the input data
-            # result = process_function(input_data)
-            
+        for input_data in remaining_inputs:            
             # Append the processed result to the output file
-            filename, model_types, kfold_seed = input_data.split('|')
-            profiler = cProfile.Profile()
-            profiler.enable()
+
             try:
+                filename, model_types, kfold_seed = input_data.split('|')
+                profiler = cProfile.Profile()
+                profiler.enable()
                 run_nd_stepwise(filename.split("=")[1], model_types.split("=")[1].split(","), int(kfold_seed.split("=")[1]))
                 profiler.disable()
                 stream = io.StringIO()
@@ -80,8 +77,9 @@ def run_all(input_file, output_file):
             except Exception as e:
                 print(f"Error processing {input_data}: {e}")
                 profiler.disable()
-
-            append_to_file(output_file, input_data)
+                append_to_file(output_file, input_data+"FAILURE-CHECK-NEEDED")
+            else:
+                append_to_file(output_file, input_data)
         # Print the profiling results
 
 
