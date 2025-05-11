@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import (accuracy_score, roc_curve, precision_recall_curve, classification_report, confusion_matrix, precision_score, recall_score,
                              f1_score, roc_auc_score, log_loss, balanced_accuracy_score,
                              cohen_kappa_score, matthews_corrcoef, jaccard_score, hamming_loss)
-from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import cross_val_predict, StratifiedKFold
 from sklearn import metrics
 import random 
 import numpy as np
@@ -123,16 +123,23 @@ def build_single_models(config, models_list: list, train_data, score_type='accur
     """
     trained_model_lists = dict()
 
-    if isinstance(train_type, list):
+    if not isinstance(train_type, list):
+        train_type = [train_type] * len(models_list)
+    if config.do_not_save_models:
         for i in range(len(models_list)):
             new_mod = mod.single_model(models_list[i], score_type=score_type)
             new_mod.train(train_data, model_type = train_type[i])
             trained_model_lists[tuple(models_list[i])] = new_mod
-            config.log.debug(f'Finished training model {models_list[i]}')
     else:
         for i in range(len(models_list)):
-            new_mod = mod.single_model(models_list[i], score_type=score_type)
-            new_mod.train(train_data, model_type = train_type)
+            replacements = str.maketrans({"[": "", "]": "", "(": "", ")": "_",",": "-"})
+            file_name = f"{config.saved_models}{config.uuid_current_run}_{train_type[i].translate(replacements)}_{str(models_list[i]).translate(replacements)}.joblib"
+            if os.path.exists(file_name):
+                new_mod = read_model(file_name)
+            else:
+                new_mod = mod.single_model(models_list[i], score_type=score_type)
+                new_mod.train(train_data, model_type = train_type[i])
+                save_model(file_name, new_mod)
             trained_model_lists[tuple(models_list[i])] = new_mod
             config.log.debug(f'Finished training model {models_list[i]}')
     return trained_model_lists
@@ -229,6 +236,57 @@ def build_tree_layer_by_layer(config, categories, X1_train, X1_test, total_tree,
 
     total1 = build_tree_layer_by_layer(config, tuple(highest_model[0]), X1_train, X1_test, total_tree, model_types)
     total2 = build_tree_layer_by_layer(config, tuple(highest_model[1]), X1_train, X1_test, total1, model_types)
+
+    return total2
+
+def kfold_build_tree_layer_by_layer(config, categories, X_train, X_test, total_tree, model_types, score_type='accuracy'):
+    """
+    Build this tree in a recursive way
+    input:
+        categories: a tuple of the lists 
+        all_model_struc: a list of all models
+        X1_train: the x train data
+        X1_test: the x test data
+        total_tree: a list pf the biggest models
+    output:
+        list of binary comparisons
+    """
+    top_accuracy = 0
+    highest_model = None
+    highest_model_type = None
+
+    if len(categories) <= 2:
+        if len(categories) == 2:
+            two_cat_mod = ((categories[0],), (categories[1],))
+            top_score = 0
+            top_model = 0
+            for mod_type in model_types:
+                tested_mods = kfold_build_single_models(config, [two_cat_mod], X_train, score_type=score_type, train_type=mod_type)
+                sorted_d_desc = sorted(tested_mods.items(), key=lambda item: item[1], reverse=True)
+                score = sorted_d_desc[0][1]
+                if score > top_score:
+                    top_score = score
+                    top_model_type = mod_type
+            total_tree[two_cat_mod] = top_model_type
+            config.log.info(f'All layer search found best split: {two_cat_mod} with mod type {top_model_type}')
+            return total_tree
+        else:
+            return total_tree
+    fresh_splitter = split_into_two_tuples(categories)
+    for left, right in fresh_splitter:
+        for mod_type in model_types:
+            scores = kfold_build_single_models(config, [(left, right)], X_train, score_type=score_type, train_type=mod_type)
+            current_acc = scores[max(scores, key=scores.get)]
+            if current_acc > top_accuracy:
+                top_accuracy = current_acc
+                highest_model = (right, left)
+                highest_model_type = mod_type
+    
+    config.log.info(f'All layer search found best split: {highest_model} with mod type {highest_model_type}')
+    total_tree[highest_model] = highest_model_type
+
+    total1 = kfold_build_tree_layer_by_layer(config, tuple(highest_model[0]), X_train, X_test, total_tree, model_types)
+    total2 = kfold_build_tree_layer_by_layer(config, tuple(highest_model[1]), X_train, X_test, total1, model_types)
 
     return total2
 
@@ -1151,17 +1209,37 @@ def build_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tre
 
     return tree_model, y_test.tolist(), output['y_pred'].to_list()
 
-def kfold_build_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None, transform_label = None):
-    # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 
-    if not built_mods:
-        built_mods = kfold_return_single_models(config, best_tree, X_train, score_type=score_type, train_type=tree_types)
-    test_single_models(built_mods, X_test)
-    built_mods = list(built_mods.values())
-    tree_model = mod.tree_model('tree_mod1', built_mods, best_tree)
-    output = tree_model.predict(X_test)
-    tree_model.model_score(y_test.tolist())
+def kfold_build_tree(config, X_train_full, y_train_full, score_type, tree_types, best_tree, categories, scoring = 'accuracy', built_mods = None, transform_label = None):
+    kf = StratifiedKFold(n_splits=5, shuffle=False)
+    models_list = best_tree
+    fold_number = 1
+    trained_model_lists = dict()
+    scores = []
+    if not isinstance(tree_types, list):
+        tree_types = [tree_types] * len(best_tree)
 
-    return tree_model, y_test.tolist(), output['y_pred'].to_list()
+    for fold, (train_index, test_index) in enumerate(kf.split(X_train_full, y_train_full)):
+        X_train, X_test = X_train_full.iloc[train_index], X_train_full.iloc[test_index]
+        y_train, y_test = y_train_full.iloc[train_index], y_train_full.iloc[test_index]
+        for i in range(len(models_list)):
+            replacements = str.maketrans({"[": "", "]": "", "(": "", ")": "_",",": "-"})
+            file_name = f"{config.saved_models}{config.uuid_current_run}_{tree_types[i].translate(replacements)}_{str(models_list[i]).translate(replacements)}_internal_foldnum{fold_number}.joblib"
+            if os.path.exists(file_name):
+                new_mod = read_model(file_name)
+            else:
+                new_mod = mod.single_model(models_list[i], score_type=score_type)
+                new_mod.train(X_train, model_type = tree_types[i])
+                save_model(file_name, new_mod)
+            trained_model_lists[tuple(models_list[i])] = new_mod
+        test_single_models(trained_model_lists, X_test)
+        built_mods = list(trained_model_lists.values())
+        
+        tree_model = mod.tree_model('tree_mod1', built_mods, best_tree)
+        output = tree_model.predict(X_test)
+        scores.append(tree_model.model_score(y_test))
+        fold_number += 1
+
+    return sum(scores) / len(scores)
     
 def build_best_tree(config, X_test, X_train, y_test, score_type, tree_types, best_tree, categories, built_mods = None, transform_label = None):
     # normalized_tree = [(tuple(sort_with_type_check(a)), tuple(sort_with_type_check(b))) for a, b in best_tree] 

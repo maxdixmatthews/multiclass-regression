@@ -205,21 +205,16 @@ class single_model(model):
                 eval_metric = 'auc', 
                 **bayes_cv.best_params_
             )
-            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'svm':
             model = make_pipeline(StandardScaler(), svm.SVC(probability=True))
-            # model = svm.SVC(probability=True)
-            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'randomforest':
             model = RandomForestClassifier(n_estimators=100)
-            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'knn':
             # model = KNeighborsClassifier()
             model = KNeighborsClassifier(n_neighbors=10)
             skip_cutoff = True
         elif model_type.lower() == 'knnhyper':
             # Set up GridSearchCV
-            # model = KNeighborsClassifier()
             param_grid = {'kneighborsclassifier__n_neighbors': range(1,31)}
             knn = make_pipeline(StandardScaler(), KNeighborsClassifier())
             knn = make_pipeline(KNeighborsClassifier())
@@ -233,15 +228,6 @@ class single_model(model):
             print(f"nothing found for {model_type.lower()}")
             model = LogisticRegression(solver='sag', max_iter=2000)
 
-            # Find Cutoff using Youden's J statistic
-            # predict_probabilities = cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba')[:, 1]
-            # fpr, tpr, thresholds = roc_curve(Y, predict_probabilities)
-            # optimal_idx = np.argmax(tpr - fpr)
-            # self.cutoff = thresholds[optimal_idx]
-            #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
-
-            # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
-            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             # XGBoost, Neural Network, Stukel model, anyother will work 
             # beat multinomial regression 
         if not skip_cutoff:
@@ -313,10 +299,10 @@ class single_model(model):
             }
 
             model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
-            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            # model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
-            self.score = model.best_score_
-            self.fitted_model = model   
+            # self.score = model.best_score_
+            # self.fitted_model = model   
             # warnings.resetwarnings()
 
         elif model_type.lower() == 'logisticregressionridge':
@@ -334,10 +320,10 @@ class single_model(model):
             }
 
             model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
-            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            # model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
-            self.score = model.best_score_
-            self.fitted_model = model   
+            # self.score = model.best_score_
+            # self.fitted_model = model   
 
         elif model_type.lower() == 'logisticregressionelasticnet':
             warnings.filterwarnings("ignore", module=r"^sklearn\.")
@@ -354,10 +340,10 @@ class single_model(model):
                 'logisticregression__C': [0.1, 1]                    
             }
             model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
-            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            # model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
             self.score = model.best_score_
-            self.fitted_model = model  
+            # self.fitted_model = model  
 
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
@@ -459,11 +445,12 @@ class single_model(model):
             param_grid = {'kneighborsclassifier__n_neighbors': range(1,31)}
             knn = make_pipeline(StandardScaler(), KNeighborsClassifier())
             model = GridSearchCV(knn, param_grid, cv=5, scoring='accuracy')
-            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            # model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
-            self.score = model.best_score_
-            self.fitted_model = model
+            # self.score = model.best_score_
+            # self.fitted_model = model
         elif model_type.lower() == 'mlp':
+            warnings.filterwarnings("ignore", module=r"^sklearn\.")
             model = make_pipeline(StandardScaler(), MLPClassifier(max_iter = 400))
             
         else:
@@ -478,15 +465,15 @@ class single_model(model):
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
 
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
-            #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+            # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             # XGBoost, Neural Network, Stukel model, anyother will work 
             # beat multinomial regression 
+        model.fit(train_df.drop([response_col,self.name], axis=1), Y)
         try:
             self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type, skip_cutoff=skip_cutoff)
         except Exception as e:
             print(f'Failed to find cutoff due to {e}')
             self.cutoff = None
-        model.fit(train_df.drop([response_col,self.name], axis=1), Y)
         self.fitted_model = model
 
         return model

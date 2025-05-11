@@ -21,4 +21,7 @@ mlflow_notebook.ipynb
 /all_new_images/
 tests/
 /tests/*
+ndstepwise/nd/*
+ndstepwise/nested-dichotomies/*
 ndStepwise/mlruns/*
+ndStepwise/saved_models/*
