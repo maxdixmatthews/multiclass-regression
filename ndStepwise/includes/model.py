@@ -99,12 +99,14 @@ class single_model(model):
             # self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
             #mf.plot_roc_curve(Y, cross_val_predict(model, train_df.drop([response_col,self.name], axis=1), Y, method='predict_proba'))
         elif model_type.lower() == 'logisticregressionlasso':
+            warnings.filterwarnings("ignore", module=r"^sklearn\.")
             model = make_pipeline(
                 StandardScaler(),
                 SelectFromModel(Lasso()),
                 LogisticRegression(solver='lbfgs', max_iter=4000))
             param_grid = {
-                'selectfrommodel__estimator__alpha': [0.000001, 0.1],
+                'selectfrommodel__estimator__alpha': [0, 0.001, 0.1],
+                'selectfrommodel__threshold': [0.0, 'mean'],
                 'logisticregression__C': [0.01, 0.1, 1]
             }
 
@@ -117,12 +119,46 @@ class single_model(model):
             # skip_cutoff = True
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'logisticregressionridge':
+            warnings.filterwarnings("ignore", module=r"^sklearn\.")
+            warnings.filterwarnings("ignore", module=r"^pandas\.")
             model = make_pipeline(
-                StandardScaler(), 
-                SelectFromModel(RidgeCV(cv=3)), 
-                LogisticRegression(solver='lbfgs', max_iter=4000))
-            
+                StandardScaler(),
+                SelectFromModel(Ridge(max_iter=10000)),
+                LogisticRegression(solver='lbfgs', max_iter=4000)
+            )
+            param_grid = {
+                'selectfrommodel__estimator__alpha': [0, 0.001, 0.1],
+                'selectfrommodel__threshold': [0.0, 'mean'],
+                'logisticregression__C': [0.01, 0.1, 1]
+            }
+            model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
+            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            skip_cutoff = True
+            self.score = model.best_score_
+            self.fitted_model = model   
+            return self.score
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
+        elif model_type.lower() == 'logisticregressionelasticnet':
+            warnings.filterwarnings("ignore", module=r"^sklearn\.")
+            warnings.filterwarnings("ignore", module=r"^pandas\.")
+            model = make_pipeline(
+                StandardScaler(),
+                SelectFromModel(ElasticNet(max_iter=10000)),  # Setting a higher max_iter to ensure convergence
+                LogisticRegression(solver='lbfgs', max_iter=4000)
+            )
+            param_grid = {
+                'selectfrommodel__estimator__alpha': [0, 0.01, 0.1],  
+                'selectfrommodel__estimator__l1_ratio': [0.5],       
+                'selectfrommodel__threshold': [0.0, 'mean'],                 
+                'logisticregression__C': [0.1, 1]                    
+            }
+            model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
+            model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
+            model.fit(train_df.drop([response_col,self.name], axis=1), Y)
+            skip_cutoff = True
+            self.score = model.best_score_
+            self.fitted_model = model   
+            return self.score
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
@@ -224,6 +260,9 @@ class single_model(model):
             self.score = model.best_score_
             self.fitted_model = model
             return self.score
+        elif model_type.lower() == 'mlp':
+            warnings.filterwarnings("ignore", module=r"^sklearn\.")
+            model = make_pipeline(StandardScaler(), MLPClassifier(max_iter = 400))
         else:
             print(f"nothing found for {model_type.lower()}")
             model = LogisticRegression(solver='sag', max_iter=2000)
