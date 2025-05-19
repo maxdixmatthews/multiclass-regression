@@ -114,7 +114,7 @@ class single_model(model):
             model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
             self.score = model.best_score_
-            self.fitted_model = model   
+            self.fitted_model = model.best_estimator_   
             return self.score
             # skip_cutoff = True
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
@@ -135,7 +135,7 @@ class single_model(model):
             model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
             self.score = model.best_score_
-            self.fitted_model = model   
+            self.fitted_model = model.best_estimator_   
             return self.score
             #self.cutoff = mf.find_cutoff(model, train_df.drop([response_col,self.name], axis=1), Y, self.score_type)
         elif model_type.lower() == 'logisticregressionelasticnet':
@@ -153,11 +153,10 @@ class single_model(model):
                 'logisticregression__C': [0.1, 1]                    
             }
             model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
-            model = GridSearchCV(model, param_grid, cv=5, scoring='accuracy')
             model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
             self.score = model.best_score_
-            self.fitted_model = model   
+            self.fitted_model = model.best_estimator_   
             return self.score
         elif model_type.lower() == 'xgboost':
             model = xgb.XGBClassifier(n_jobs = -1, objective="binary:logistic", eval_metric = 'auc')
@@ -253,12 +252,11 @@ class single_model(model):
             # Set up GridSearchCV
             param_grid = {'kneighborsclassifier__n_neighbors': range(1,31)}
             knn = make_pipeline(StandardScaler(), KNeighborsClassifier())
-            knn = make_pipeline(KNeighborsClassifier())
             model = GridSearchCV(knn, param_grid, cv=5, scoring='accuracy')
             model.fit(train_df.drop([response_col,self.name], axis=1), Y)
             skip_cutoff = True
             self.score = model.best_score_
-            self.fitted_model = model
+            self.fitted_model = model.best_estimator_
             return self.score
         elif model_type.lower() == 'mlp':
             warnings.filterwarnings("ignore", module=r"^sklearn\.")
